@@ -47,6 +47,7 @@ WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 600
 WINDOW_TITLE = "Armies"
 
+SOLDIER_SPACING = 10
 player_formation = [
     [1, 1, 1],
     [1, 1, 1],
