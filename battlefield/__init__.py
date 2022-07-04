@@ -39,8 +39,6 @@ class Battlefield(Window):
         self.player_list = player_list
         self.enemy_list = enemy_list
 
-        print(list(player_list))
-
 
 if __name__ == "__main__":
     battlefield = Battlefield()
