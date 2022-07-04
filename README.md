@@ -11,6 +11,10 @@ Your job is to battle an enemy army with several commands. Your army is split up
 
 A soldier is armed with a sword and a bow. Their damage is based on their strength and range. For example, an arrow would inflict more damage at close range than far range. They start out with twenty-four arrows (fifty for archers) and their health is set to 100.
 
+This game is still heavily in development. If you encounter any issues, post them in the Issues page.
+
+### Contact the maintainer
+mailto: esamuelchan@gmail.com
 ### TODO
 - [ ] Display armies
 - [x] Have soldiers decide between melee and range attacks
