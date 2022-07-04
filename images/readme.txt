@@ -1,1 +1,0 @@
-This folder contains all of the images and textures used. The GUI folder contains all the images of the GUI widgets. Images from there are mainly from https://www.kenney.nl/. The objects folder has all of the objects and items in the battlefield, including arrows, soldiers, etc. The application folder has the application graphics (icons, cursors, etc)
