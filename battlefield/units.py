@@ -22,20 +22,33 @@ def setup(_player_list, _enemy_list):
 
 class Unit:
     
-    def __init__(self, formation, allegiance):
+    def __init__(self, formation, allegiance, x, y):
         global player_list, enemy_list
 
         self.formation = []
-
+        
+        self.x = x
+        self.y = y
+        
         if allegiance == player_list:
             self.rivals = enemy_list
         else:
             self.rivals = player_list
-
+        
+        row = x
+        col = y
+        
         for rank in formation:
+            row += SOLDIER_SPACING
+            
             for soldier in rank:
+                col += SOLDIER_SPACING
+                
                 if soldier == 1:
                     soldier = Soldier(PLAYER, self.rivals, light_infantry=True)
-
+                    
+                    soldier.x = row
+                    soldier.y = col
+                    
                     if self.rivals == enemy_list: player_list.append(soldier)
                     else: enemy_list.append(soldier)
