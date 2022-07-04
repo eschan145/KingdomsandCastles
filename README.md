@@ -27,9 +27,14 @@ The GUI interface is completely created by Ethan Chan. It includes several diffe
 A label is a great and easy way to draw text. Labels are used as components in many widgets, including buttons and sliders.
 
 |Parameter|Function|
-|-|-|
-|x|x coordinate of widget|
-|y|y coordinate of widget|
+|-|-|-|
+|text|`str`, HTML|text to be displayed|
+|x||`int`|x coordinate of widget|
+|y||`int`|y coordinate of widget|
+|colors|`list`, `[normal, (hover, press, disable)]`. Defaults to `[BLACK, (COOL_BLACK, DARK_SLATE_GRAY, DARK_GRAY)]|colors to be displayed in RGB|
+|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font to be displayed|
+|title|`bool`. Defaults to `False`|label displayed as title|
+|justify|`str`, `LEFT`, `CENTER`, or `RIGHT`. Defaults to `LEFT`
 
 
 This game is still heavily in development. If you encounter any issues, please post them in the Issues page. It was created using the Arcade library (https://api.arcade.academy/), which is based off on pyglet. This game was inspired by Masendor (https://github.com/remance/Masendor).
