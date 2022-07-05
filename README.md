@@ -1,4 +1,4 @@
-## Armies
+# Armies
 An advanced battlefield simulator.
 
 In this game, you command an army of soldiers. They can be of the following types:
@@ -18,9 +18,10 @@ Formations are in a three-dimensional list.
 - 3 signifies archer
 - 4 signifies unit commander
 
+## Development information
 ### Source files
 #### Geometry
-This file contains geometry functions to be used in Armies.
+This file contains geometric functions to be used in Armies.
 
 `Point`
 
