@@ -11,6 +11,8 @@ Your job is to battle an enemy army. Your army is split up into multiple units; 
 
 A soldier is armed with a sword and a bow. Their damage is based on their strength and range. For example, an arrow would inflict more damage at close range than far range. They start out with twenty-four arrows (fifty for archers) and their health is set to 100. Soldiers attack individually if commanded to. If enemies are too far for swords, they use arrows. As a commander, you can also tell them to retreat into lines if near defeat. Until Arcade releases a optimization update, the maximum number of soldiers on each side is fewer than 1,000.
 
+An arrow is fired every 10,000 frames for light infantry, 7,000 frames for heavy infantry, and 15,000 frames for archers. An arrow's damage is calculated by multiplying its velocity in px/s by 15.
+
 ### Formations
 Formations are in a three-dimensional list.
 - 1 signifies light infantry
@@ -52,7 +54,22 @@ Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
 
 The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
-To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`.
+To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`. Calling `destroy()` on a widget disconnects it from the event framework and removes it from the container. `check_collision(x, y)` sees if the `x` and `y` point is colliding with the widget. If that fails, use `_check_collision(x, y)`.
+
+List of widget events:
+|Event|Parameters|
+|-|-|
+|on_key|keys, modifiers|
+|on_lift|keys, modifiers|
+|on_hover|x, y, dx, dy|
+|on_press|x, y, buttons, modifiers|
+|on_release|x, y, buttons, modifiers|
+|on_drag|x, y, dx, dy, buttons, modifiers|
+|on_scroll|x, y, mouse, direction|
+|on_focus||
+|on_text_select|motion|
+|draw||
+|update||
 
 ![image](https://user-images.githubusercontent.com/103769713/177225082-cb70e196-5159-4a6a-b134-fada8fb977d0.png)
 
