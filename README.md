@@ -49,6 +49,7 @@ This file contains geometric functions to be used in Armies.
 
 ### GUI Documentation
 Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
+
 The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
 To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`.
