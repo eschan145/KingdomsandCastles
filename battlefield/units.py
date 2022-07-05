@@ -1,4 +1,4 @@
-from arcade import Window
+from arcade import Window, get_window
 from sys import path
 
 import sys # User full imports: may have three path variables
@@ -9,26 +9,25 @@ parent = os.path.dirname(current)
   
 sys.path.append(parent)
 
-from sprite import Soldier
-from variables import enemy_list, player_list
+from variables import Soldier
 from constants import *
 
 
 class Unit:
     
     def __init__(self, formation, allegiance, x, y):
-        global player_list, enemy_list
-
         self.formation = []
         
         self.x = x
         self.y = y
 
-        if allegiance == player_list:
-            self.rivals = enemy_list
-        else:
-            self.rivals = player_list
+        self.window = get_window()
 
+        if allegiance == PLAYER:
+            self.rivals = self.window.enemy_list
+        else:
+            self.rivals = self.window.player_list
+        
         row = x - SOLDIER_SPACING
         col = y
 
@@ -38,12 +37,21 @@ class Unit:
             
             for soldier in rank:
                 col -= SOLDIER_SPACING
-                
+
                 if soldier == 1:
-                    soldier = Soldier(PLAYER, self.rivals, light_infantry=True)
+                    soldier = Soldier(allegiance, self.rivals, light_infantry=True)
 
                     soldier.left = col
                     soldier.top = row
 
-                    if self.rivals == enemy_list: player_list.append(soldier)
-                    else: enemy_list.append(soldier)
+                    if self.rivals == self.window.enemy_list: self.window.player_list.append(soldier)
+                    else: self.window.enemy_list.append(soldier)
+                
+                if soldier == 3:
+                    soldier = Soldier(allegiance, self.rivals, archer=True)
+
+                    soldier.left = col
+                    soldier.top = row
+
+                    if self.rivals == self.window.enemy_list: self.window.player_list.append(soldier)
+                    else: self.window.enemy_list.append(soldier)
