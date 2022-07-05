@@ -23,7 +23,9 @@ Formations are in a three-dimensional list.
 This file contains geometry functions to be used in Armies.
 
 `Point`
+
 `cube(value)`
+
 `square(value)`
 
 `are_polygons_intersecting(a, b)`
