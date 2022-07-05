@@ -22,6 +22,20 @@ Formations are in a three-dimensional list.
 #### Geometry
 This file contains geometry functions to be used in Armies.
 
+`Point`
+`cube(value)`
+`square(value)`
+
+`are_polygons_intersecting(a, b)`
+`check_collision(a, b)`
+`convert_one_to_four_quadrants(x, y, width, height)`
+`get_closest(object, list)`
+`get_distance(a, b)`
+`is_point_in_polygon(x, y, points)`
+`set_hitbox(object)`
+`set_polygon(object)`
+`_check_collision(a, b)`
+
 ### GUI Documentation
 Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
 The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
