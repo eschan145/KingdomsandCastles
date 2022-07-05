@@ -7,7 +7,7 @@ In this game, you command an army of soldiers. They can be of the following type
 2. Heavy infantry         — Heavily armored but slower foot soldiers
 3. Archers                — Soldier specialized in use with a bow
 
-Your job is to battle an enemy army with several commands. Your army is split up into multiple units; each one you can command at your will. You can assign commands to inidividual units. Units can contain smaller units with them, culminating into one huge army.
+Your job is to battle an enemy army. Your army is split up into multiple units; each one you can command at your will. You can assign commands to inidividual units. Units can contain smaller units with them, culminating into one huge army. This simulation is designed to be as realistic as possible, so soldiers will take longer to move up hills, bodies are not removed, units somewhat dissolve when commander is killed, etc.
 
 A soldier is armed with a sword and a bow. Their damage is based on their strength and range. For example, an arrow would inflict more damage at close range than far range. They start out with twenty-four arrows (fifty for archers) and their health is set to 100. Soldiers attack individually if commanded to. If enemies are too far for swords, they use arrows. As a commander, you can also tell them to retreat into lines if near defeat. Until Arcade releases a optimization update, the maximum number of soldiers on each side is fewer than 1,000.
 
@@ -18,7 +18,7 @@ Formations are in a three-dimensional list.
 - 3 signifies archer
 - 4 signifies unit commander
 
-### GUI
+### GUI Documentation
 Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
 The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
