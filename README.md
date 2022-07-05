@@ -194,3 +194,4 @@ This game is still heavily in development. If you encounter any issues, please p
 - [ ] Give soldiers basic properties (health, strength)
 - [ ] Command soldiers
 - [ ] Debug `Entry` glitches
+- [ ] Complete documentation
