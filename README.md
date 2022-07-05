@@ -57,19 +57,19 @@ The GUI interface is completely created by Ethan Chan. It includes several diffe
 To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`. Calling `destroy()` on a widget disconnects it from the event framework and removes it from the container. `check_collision(x, y)` sees if the `x` and `y` point is colliding with the widget. If that fails, use `_check_collision(x, y)`.
 
 List of widget events:
-|Event|Parameters|
-|-|-|
-|on_key|keys, modifiers|
-|on_lift|keys, modifiers|
-|on_hover|x, y, dx, dy|
-|on_press|x, y, buttons, modifiers|
-|on_release|x, y, buttons, modifiers|
-|on_drag|x, y, dx, dy, buttons, modifiers|
-|on_scroll|x, y, mouse, direction|
-|on_focus||
-|on_text_select|motion|
-|draw||
-|update||
+|Event|Parameters|Details|
+|-|-|-|
+|on_key|keys, modifiers|a key is pressed|
+|on_lift|keys, modifiers|a key is released|
+|on_hover|x, y, dx, dy|the widget is hovered|
+|on_press|x, y, buttons, modifiers|the widget is pressed|
+|on_release|x, y, buttons, modifiers|the widget is released|
+|on_drag|x, y, dx, dy, buttons, modifiers|the widget is dragged|
+|on_scroll|x, y, mouse, direction|the widget is scrolled|
+|on_focus||the widget has focus|
+|on_text_select|motion|the widget has text selected|
+|draw||draw the widget|
+|update||update the widget|
 
 ![image](https://user-images.githubusercontent.com/103769713/177225082-cb70e196-5159-4a6a-b134-fada8fb977d0.png)
 
