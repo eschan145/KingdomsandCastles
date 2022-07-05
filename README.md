@@ -59,17 +59,17 @@ To start a GUI interface, use the `Container` class. Initialize this once in you
 List of widget events:
 |Event|Parameters|Details|
 |-|-|-|
-|on_key|keys, modifiers|a key is pressed|
-|on_lift|keys, modifiers|a key is released|
-|on_hover|x, y, dx, dy|the widget is hovered|
-|on_press|x, y, buttons, modifiers|the widget is pressed|
-|on_release|x, y, buttons, modifiers|the widget is released|
-|on_drag|x, y, dx, dy, buttons, modifiers|the widget is dragged|
-|on_scroll|x, y, mouse, direction|the widget is scrolled|
-|on_focus||the widget has focus|
-|on_text_select|motion|the widget has text selected|
-|draw||draw the widget|
-|update||update the widget|
+|`on_key`|`keys`, `modifiers`|a key is pressed|
+|`on_lift`|`keys`, `modifiers`|a key is released|
+|`on_hover`|`x`, `y`, `dx`, `dy`|the widget is hovered|
+|`on_press`|`x`, `y`, `buttons`, `modifiers`|the widget is pressed|
+|`on_release`|`x`, `y`, `buttons`, `modifiers`|the widget is released|
+|`on_drag`|`x`, `y`, `dx`, `dy`, `buttons`, `modifiers`|the widget is dragged|
+|`on_scroll`|`x`, `y`, `mouse`, `direction`|the widget is scrolled|
+|`on_focus`||the widget has focus|
+|`on_text_select`|`motion`|the widget has text selected|
+|`draw`||draw the widget|
+|`update`||update the widget|
 
 ![image](https://user-images.githubusercontent.com/103769713/177225082-cb70e196-5159-4a6a-b134-fada8fb977d0.png)
 
