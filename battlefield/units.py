@@ -10,14 +10,8 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 
 from sprite import Soldier
-
+from variables import enemy_list, player_list
 from constants import *
-
-def setup(_player_list, _enemy_list):
-    global player_list, enemy_list
-
-    player_list = _player_list
-    enemy_list = _enemy_list
 
 
 class Unit:
@@ -29,26 +23,27 @@ class Unit:
         
         self.x = x
         self.y = y
-        
+
         if allegiance == player_list:
             self.rivals = enemy_list
         else:
             self.rivals = player_list
-        
-        row = x
+
+        row = x - SOLDIER_SPACING
         col = y
-        
+
         for rank in formation:
+            col = x
             row += SOLDIER_SPACING
             
             for soldier in rank:
-                col += SOLDIER_SPACING
+                col -= SOLDIER_SPACING
                 
                 if soldier == 1:
                     soldier = Soldier(PLAYER, self.rivals, light_infantry=True)
-                    
-                    soldier.x = row
-                    soldier.y = col
-                    
+
+                    soldier.left = col
+                    soldier.top = row
+
                     if self.rivals == enemy_list: player_list.append(soldier)
                     else: enemy_list.append(soldier)
