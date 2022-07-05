@@ -161,5 +161,6 @@ This game is still heavily in development. If you encounter any issues, please p
 ### TODO
 - [ ] Display armies
 - [x] Have soldiers decide between melee and range attacks
-- [x] Give soldiers basic properties (health, strength)
+- [ ] Give soldiers basic properties (health, strength)
 - [ ] Command soldiers
+- [ ] Debug `Entry` glitches
