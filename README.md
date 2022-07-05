@@ -189,9 +189,10 @@ esamuelchan@gmail.com
 This game is still heavily in development. If you encounter any issues, please post them in the Issues page. It was created using the Arcade library (https://api.arcade.academy/), which is based off on pyglet. This game was inspired by Masendor (https://github.com/remance/Masendor).
 
 ### TODO
-- [ ] Display armies
+- [x] Display armies
 - [x] Have soldiers decide between melee and range attacks
-- [ ] Give soldiers basic properties (health, strength)
+- [x] Give soldiers basic properties (health, strength)
+- [x] Soldiers take damage when hit
 - [ ] Command soldiers
 - [ ] Debug `Entry` glitches
 - [ ] Complete documentation
