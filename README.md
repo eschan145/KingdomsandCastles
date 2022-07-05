@@ -51,11 +51,12 @@ A button is the simplest interactive widget. It can be given a command as a func
 |command|`callable`. Defaults to `None`|command called when pressed|
 |parameters|`list`. Defaults to `[]`|parameters of command
 |colors|`list`, `[button, text]`. Has default|colors of button in `str` and RGB|
+|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of button|
 |callback|`str`, `SINGLE`, `DOUBLE`, `MULTIPLE`|frequency of invoking command|
 
 Components:
-- Image
-- Label
+- Image (self.image)
+- Label (self.label)
 
 A button can be invoked by using the `invoke()` function. This sets the state of the button to a false press and calls its command. This is ignored if the button has no command or is disabled. A button can be assigned keys, which invoke the button, using the `keys` property or `bind(*keys)`. Multiple keys can be binded this way. To unbind keys, change the property or use the `unbind(*keys)` function. Images can be changed, with the properties `normal_image`, `hover_image`, `press_image`, and `disable_image`. These are Arcade textures. A button is used when it has focus with <kbd>Space</kbd>.
 
@@ -67,6 +68,17 @@ A toggle is a switch widget. It switches between true and false states.
 |text|`str`, HTML|text of toggle|
 |x|`int`|x coordinate of toggle|
 |y|`int`|y coordinate of toggle|
+|colors|`tuple`. Defaults to BLACK|color of text in RGB|
+|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of text|
+|default|`bool`. Defaults to `True`|default value of toggle|
+|padding|`int`. Defaults to 160|horizontal padding between text and bar|
+
+Components:
+- Image (self.bar)
+- Image (self.knob)
+- Label (self.label)
+
+A toggle can be moved by setting its property `.switch` to `True`. This has no effect when disabled. Its state can be accessed using `.value` and its position `.on_left` and `.on_right`. Changing `.value` has no effect, but modifying `.on_left` and `.on_right` will cause the toggle to glitch out and bug. As like the button, the toggle's images can be changed with the `.true_image`, `.false_image`, `.hover_true_image`, and the `hover_false_image`. It can be used when it has focus with <kbd>Space</kbd> and <kbd>Enter</kbd>
 
 ### Contact the maintainer
 esamuelchan@gmail.com
