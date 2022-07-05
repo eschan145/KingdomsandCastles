@@ -18,10 +18,10 @@ gui_image_path = f"{image_path}gui/"
 theme = "yellow"
 
 button = {
-    f"{theme}_button_normal" : f"{gui_image_path}{theme}/{theme}_button_normal.png",
-    f"{theme}_button_hover" : f"{gui_image_path}{theme}/{theme}_button_hover.png",
-    f"{theme}_button_press" : f"{gui_image_path}{theme}/{theme}_button_press.png",
-    f"{theme}_button_disable" : f"{gui_image_path}{theme}/{theme}_button_disable.png"
+    f"{theme}_button_normal" : f"{gui_image_path}{theme}_button_normal.png",
+    f"{theme}_button_hover" : f"{gui_image_path}{theme}_button_hover.png",
+    f"{theme}_button_press" : f"{gui_image_path}{theme}_button_press.png",
+    f"{theme}_button_disable" : f"{gui_image_path}{theme}_button_disable.png"
 }
 
 # TODO: add all of the filepaths into entry map, toggle map, etc.
@@ -42,9 +42,9 @@ none = f"{image_path}application/none.png"
 
 
 soldier = {
-    "player_light_infantry" : f"{image_path}/objects/soldier/player/light_infantry.png"
+    "player_light_infantry" : f"{image_path}/objects/soldiers/player_light_infantry.png"
 }
 
 projectile = {
-    "arrow" : f"{image_path}/objects/projectile/arrow.png"
+    "arrow" : f"{image_path}/objects/projectiles/arrow.png"
 }
