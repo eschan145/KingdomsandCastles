@@ -27,13 +27,21 @@ This file contains geometry functions to be used in Armies.
 `square(value)`
 
 `are_polygons_intersecting(a, b)`
+
 `check_collision(a, b)`
+
 `convert_one_to_four_quadrants(x, y, width, height)`
+
 `get_closest(object, list)`
+
 `get_distance(a, b)`
+
 `is_point_in_polygon(x, y, points)`
+
 `set_hitbox(object)`
+
 `set_polygon(object)`
+
 `_check_collision(a, b)`
 
 ### GUI Documentation
