@@ -114,7 +114,7 @@ A label is a great and easy way to draw text. Labels are used as components in m
 |x|`int`|x coordinate of label|
 |y|`int`|y coordinate of label|
 |colors|`list`, `[normal, (hover, press, disable)]`. Has default|colors of label in RGB|
-|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of label|
+|font|`list`, `[family, size]`. Defaults to `["Montserrat", 12]`|font of label|
 |title|`bool`. Defaults to `False`|label displayed as title?|
 |justify|`str`, (`LEFT`, `CENTER`, or `RIGHT`). Defaults to `LEFT`|justification of label|
 |width|`int`. Defaults to 0|maximum width of the label (used with `multiline`)|
@@ -133,7 +133,7 @@ A button is the simplest interactive widget. It can be given a command as a func
 |command|`callable`. Defaults to `None`|command called when pressed|
 |parameters|`list`. Defaults to `[]`|parameters of command
 |colors|`list`, `[button, text]`. Has default|colors of button in `str` and RGB|
-|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of button|
+|font|`list`, `[family, size]`. Defaults to `["Montserrat", 12]`|font of button|
 |callback|`str`, (`SINGLE`, `DOUBLE`, or `MULTIPLE`). Defaults to `SINGLE`|frequency of invoking command|
 
 Components:
@@ -171,7 +171,7 @@ A slider is a numerical widget, designed to show values with a slider.
 |x|`int`|x coordinate of slider|
 |y|`int`|y coordinate of slider|
 |colors|`tuple`. Defaults to `BLACK`|color of text in RGB|
-|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of text|
+|font|`list`, `[family, size]`. Defaults to `["Montserrat", 12]`|font of text|
 |size|`int`. Defaults to 10|number of numerical values|
 |length|`int`. Defaults to 200|length of bar|
 |padding|`int`. Defaults to 50|horizontal padding between text and bar|
