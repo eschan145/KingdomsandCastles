@@ -1,4 +1,4 @@
-from arcade import SpriteList, Window
+from arcade import SpriteList, Window, draw_point
 from arcade import run
 
 import os
@@ -11,14 +11,11 @@ sys.path.append(parent)
 
 from sprite import Soldier, Arrow
 from constants import *
+from color import RED, WHITE
 
 from units import Unit
-from units import setup
+from variables import enemy_list, player_list
 
-player_list = SpriteList()
-enemy_list = SpriteList()
-
-setup(player_list, enemy_list)
 
 class Battlefield(Window):
 
@@ -27,18 +24,26 @@ class Battlefield(Window):
 
         global player_list, enemy_list
         
-        self.player_list = SpriteList()
-        self.enemy_list = SpriteList()
+        self.player_list = player_list
+        self.enemy_list = enemy_list
         
-        self.unit = Unit(player_formation, self.player_list)
+        self.unit = Unit(player_formation, player_list, 100, 50)
+        
+
+        self.background_color = WHITE
     
     def on_draw(self):
+        self.clear()
+
         self.player_list.draw()
         self.enemy_list.draw()
 
         self.player_list = player_list
         self.enemy_list = enemy_list
 
+    def on_update(self, delta_time):
+        self.player_list.update()
+        self.enemy_list.update()
 
 if __name__ == "__main__":
     battlefield = Battlefield()
