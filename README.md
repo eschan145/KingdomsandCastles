@@ -34,7 +34,7 @@ A label is a great and easy way to draw text. Labels are used as components in m
 |colors|`list`, `[normal, (hover, press, disable)]`. Has default|colors of label in RGB|
 |font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of label|
 |title|`bool`. Defaults to `False`|label displayed as title?|
-|justify|`str`, `LEFT`, `CENTER`, or `RIGHT`. Defaults to `LEFT`|justification of label|
+|justify|`str`, (`LEFT`, `CENTER`, or `RIGHT`). Defaults to `LEFT`|justification of label|
 |width|`int`. Defaults to 0|maximum width of the label (used with `multiline`)|
 |multiline|`bool`. Defaults to `False`|label with multiple lines?|
 
@@ -52,7 +52,7 @@ A button is the simplest interactive widget. It can be given a command as a func
 |parameters|`list`. Defaults to `[]`|parameters of command
 |colors|`list`, `[button, text]`. Has default|colors of button in `str` and RGB|
 |font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of button|
-|callback|`str`, `SINGLE`, `DOUBLE`, `MULTIPLE`|frequency of invoking command|
+|callback|`str`, (`SINGLE`, `DOUBLE`, or `MULTIPLE`). Defaults to `SINGLE`|frequency of invoking command|
 
 Components:
 - Image (self.image)
