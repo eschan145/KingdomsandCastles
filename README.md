@@ -19,7 +19,7 @@ Formations are in a three-dimensional list.
 - 4 signifies unit commander
 
 ### GUI
-The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox.
+The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
 ![image](https://user-images.githubusercontent.com/103769713/177225082-cb70e196-5159-4a6a-b134-fada8fb977d0.png)
 
@@ -68,7 +68,7 @@ A toggle is a switch widget. It switches between true and false states.
 |text|`str`, HTML|text of toggle|
 |x|`int`|x coordinate of toggle|
 |y|`int`|y coordinate of toggle|
-|colors|`tuple`. Defaults to BLACK|color of text in RGB|
+|colors|`tuple`. Defaults to `BLACK`|color of text in RGB|
 |font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of text|
 |default|`bool`. Defaults to `True`|default value of toggle|
 |padding|`int`. Defaults to 160|horizontal padding between text and bar|
@@ -79,6 +79,27 @@ Components:
 - Label (self.label)
 
 A toggle can be moved by setting its property `.switch` to `True`. This has no effect when disabled. Its state can be accessed using `.value` and its position `.on_left` and `.on_right`. Changing `.value` has no effect, but modifying `.on_left` and `.on_right` will cause the toggle to glitch out and bug. As like the button, the toggle's images can be changed with the `.true_image`, `.false_image`, `.hover_true_image`, and the `hover_false_image`. It can be used when it has focus with <kbd>Space</kbd> and <kbd>Enter</kbd>
+
+#### Sliders
+A slider is a numerical widget, designed to show values with a slider.
+
+|Parameter||Details|
+|-|-|-|
+|text|`str`, HTML|text of slider before change|
+|x|`int`|x coordinate of slider|
+|y|`int`|y coordinate of slider|
+|colors|`tuple`. Defaults to `BLACK`|color of text in RGB|
+|font|`list`, `[family, size]`. Defaults to `[Montserrat, 12]`|font of text|
+|size|`int`. Defaults to 10|number of numerical values|
+|length|`int`. Defaults to 200|length of bar|
+|padding|`int`. Defaults to 50|horizontal padding between text and bar|
+
+Components:
+- Image (self.bar)
+- Image (self.knob)
+- Label (self.label)
+
+A slider's value can be taken with its property `.value`. Pressing the <kbd>←</kbd> or <kbd>→</kbd> moves the slider by its numerical amount. Also, scrolling the slider can change its value.
 
 ### Contact the maintainer
 esamuelchan@gmail.com
