@@ -1,15 +1,14 @@
-"""Contains variables used throughout the battlefield"""
+"""Contains variables used throughout the battlefield (Pun not intended)"""
 
-from cmath import cos, sin
-from math import atan2, radians
-import time
-from arcade import SpriteList
+from arcade import SpriteList, get_angle_degrees
 from arcade import get_window
 
 from pyglet.event import EventDispatcher
 
 import os
 import sys
+
+from scipy import rand
 
 
 current = os.path.dirname(os.path.realpath(__file__))
@@ -19,10 +18,9 @@ sys.path.append(parent)
 
 from sprite import Object
 
-from geometry import Point, check_collision
-from geometry import chance, get_closest
+from geometry import Point, chance, check_collision, get_closest, get_angle_degrees
 
-from random import choice, randint
+from random import choice, randint, uniform
 
 from file import soldier, projectile
 
@@ -54,13 +52,26 @@ class Arrow(Object):
         self.target = target
 
         self.accuracy = 0
-        self.speed = 2
+        self.speed = 0.5
 
         self.shooter.arrows -= 1
+        
+        self.accuracy_x = randint(-ARROW_ACCURACY, ARROW_ACCURACY)
+        self.accuracy_y = randint(-ARROW_ACCURACY, ARROW_ACCURACY)
+        
+        if self.shooter.archer:
+            self.speed = 0.7
 
-        self.point = Point(self.target.x, self.target.y)
+            self.accuracy_x = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
+            self.accuracy_y = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
+
+        
+        self.point = Point(self.target.x + self.accuracy_x, self.target.y + self.accuracy_y)
 
         self.window.projectile_list.append(self)
+
+    def remove(self):
+        self.remove_from_sprite_lists()
 
     def update(self):
         Object.update(self)
@@ -76,13 +87,19 @@ class Arrow(Object):
             if self.shooter.allegiance == ENEMY and \
                 isinstance(object, Soldier):
                 object.health -= self.speed * ARROW_DAMAGE
-                self.remove_from_sprite_lists()
+                self.remove()
         
         for object in check_collision(self, self.window.enemy_list):
             if self.shooter.allegiance == PLAYER and \
                 isinstance(object, Soldier):
                 object.health -= self.speed * ARROW_DAMAGE
-                self.remove_from_sprite_lists()
+                self.remove()
+        
+        if self.bottom > self.window.height or \
+            self.top < 0 or \
+            self.left > self.window.width or \
+            self.right < 0:
+            self.remove()
 
 
 class Soldier(Object):
@@ -119,6 +136,8 @@ class Soldier(Object):
         self.arrows = 24
         self.strength = 10
 
+        self.target = None
+
         if self.archer: self.arrows = 50
     
         self.weapon = RANGE
@@ -126,11 +145,15 @@ class Soldier(Object):
     def on_attack(self):
         distance = get_closest(self, self.rivals)
 
+        if chance(5):
+            self.strength -= 1
+
         if distance[1] < randint(MELEE_RANGE - MELEE_RANGE_CHANCE,
                               MELEE_RANGE + MELEE_RANGE_CHANCE):
             self.weapon = MELEE
 
-            # TODO: have soldier inflict damage
+            if distance[1] < MELEE_RANGE:
+                distance[0].health -= self.strength * 3
         
         else:
             self.weapon = RANGE
@@ -142,10 +165,28 @@ class Soldier(Object):
         if self.health <= 0:
             self.remove_from_sprite_lists()
 
-        for enemy in self.rivals:
-            self.destination_point = get_closest(self, self.rivals)[0].position
+        if chance(1000):
+            self.health += 1
+        
+        if self.target:
+            if get_closest(self, self.rivals)[1] < MELEE_RANGE:
+                self.follow(self.target, rate=5, speed=1.5)
 
+        for enemy in self.rivals:
             if enemy.health > 0: # Enemy dead
-                if chance(5000) and len(self.window.projectile_list) < 20:
+                if self.archer: rate = 10000
+                else: rate = 15000
+                if chance(rate) and len(self.window.projectile_list) < 20:
                     self.on_attack() # TODO: add interval of attack
+        
+        # if self.allegiance == PLAYER:
+        #     list = self.window.player_list
+        # else:
+        #     list = self.window.enemy_list
+        
+        for enemy in check_collision(self, self.rivals):
+            if chance(5) and self.change_x:
+                enemy.y += 1
+            
+
                     
