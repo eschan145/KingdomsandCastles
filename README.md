@@ -143,12 +143,14 @@ A label is a great and easy way to draw text. Labels are used as components in m
 |x|`int`|x coordinate of label|
 |y|`int`|y coordinate of label|
 |colors|`list`, `[normal, (hover, press, disable)]`. Has default|colors of label in RGB|
-|font|`list`, `[family, size]`. Defaults to `["Montserrat", 12]`|font of label|
+|font|`tuple`, `(family, size)`. Defaults to `("Montserrat", 12)`|font of label|
 |title|`bool`. Defaults to `False`|label displayed as title?|
 |justify|`str`, (`LEFT`, `CENTER`, or `RIGHT`). Defaults to `LEFT`|justification of label|
 |width|`int`. Defaults to 0|maximum width of the label (used with `multiline`)|
 |multiline|`bool`. Defaults to `False`|label with multiple lines?|
+|checkbutton|`bool`. Defaults to `False`|checkbutton in front of label|
 |command|`callable`. Defaults to `None`|command called when pressed|
+|parameters|`list`. Defaults to []|parameters used in command|
 
 All properties, including others like `.alpha`, `document` (pyglet HTML document), `length` (length of text), and `height` can be accessed.
 
