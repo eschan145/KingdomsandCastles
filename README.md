@@ -13,6 +13,18 @@ A soldier is armed with a sword and a bow. Their damage is based on their streng
 
 An arrow is fired every 10,000 frames for light infantry, 7,000 frames for heavy infantry, and 15,000 frames for archers. An arrow's damage is calculated by multiplying its velocity in px/s by 15.
 
+### Commands
+Commands help you lead your army and attack.
+
+|Command|Key|Details|
+|-|-|-|
+|<kbd>   </kbd> Volley|<kbd>v</kbd>|has all <u>archers</u> fire arrows simultaneously at selected targets. Note that this uses up arrows|
+|<kbd>☑️</kbd> Move forward|<kbd>↑</kbd>|move your army forwards|
+|<kbd>☑️</kbd> Move backward|<kbd>↓</kbd>|move your army backwards|
+|<kbd>☑️</kbd> Move left|<kbd>←</kbd>|move your army left|
+|<kbd>☑️</kbd> Move right|<kbd>→</kbd>|move your army right|
+
+
 ### Formations
 Formations are in a three-dimensional list.
 - 1 signifies light infantry
