@@ -18,11 +18,13 @@ Commands help you lead your army and attack.
 
 |Command|Key|Details|
 |-|-|-|
-|<kbd>   </kbd> Volley|<kbd>v</kbd>|has all <u>archers</u> fire arrows simultaneously at selected targets. Note that this uses up arrows|
-|<kbd>☑️</kbd> Move forward|<kbd>↑</kbd>|move your army forwards|
-|<kbd>☑️</kbd> Move backward|<kbd>↓</kbd>|move your army backwards|
-|<kbd>☑️</kbd> Move left|<kbd>←</kbd>|move your army left|
-|<kbd>☑️</kbd> Move right|<kbd>→</kbd>|move your army right|
+|Volley|<kbd>Q</kbd>|has all <u>archers</u> fire arrows simultaneously at selected targets. Note that this uses up arrows|
+|Split|<kbd>W</kbd>|split unit into individual soldiers to attack. Loses defenses of ranks and volleys|
+|Switch projectile|<kbd>E</kbd>|switch between arrows, fire arrows, spears, ...|
+|Move forward|<kbd>↑</kbd>|move your army forwards|
+|Move backward|<kbd>↓</kbd>|move your army backwards|
+|Move left|<kbd>←</kbd>|move your army left|
+|Move right|<kbd>→</kbd>|move your army right|
 
 ### Installation
 To install this, you must download the Python `arcade` library.
