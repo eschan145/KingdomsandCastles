@@ -24,6 +24,13 @@ Commands help you lead your army and attack.
 |<kbd>☑️</kbd> Move left|<kbd>←</kbd>|move your army left|
 |<kbd>☑️</kbd> Move right|<kbd>→</kbd>|move your army right|
 
+### Installation
+To install this, you must download the Python `arcade` library.
+1. Open up the Command Prompt (Type "cmd" in the search bar and press <kbd>Enter</kbd>
+2. Type in `py -m pip install arcade --user` or `python -m pip install arcade --user`
+3. Press <kbd>Enter</kbd>
+
+If the download is successful, download this respository and open it with your favorite code editor.
 
 ### Formations
 Formations are in a three-dimensional list.
