@@ -42,6 +42,9 @@ Formations are in a three-dimensional list.
 - 4 signifies unit commander
 
 ## Development information
+### TODO
+At this point, soldiers need to have more realistic melee attacks. They just swarm into the enemy, instead of pushing their way in. They also can flow through each other, and collision checks need to make them not run into each other.
+
 ### Source files
 #### Geometry
 This file contains geometric functions to be used in Armies.
