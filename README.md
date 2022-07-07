@@ -237,6 +237,7 @@ This game is still heavily in development. If you encounter any issues, please p
 - [x] Have soldiers decide between melee and range attacks
 - [x] Give soldiers basic properties (health, strength)
 - [x] Soldiers take damage when hit
+- [ ] Multiplayer
 - [ ] Command soldiers
 - [ ] Debug `Entry` glitches
 - [ ] Complete documentation
