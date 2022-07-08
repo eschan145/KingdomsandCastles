@@ -162,7 +162,7 @@ A label is a great and easy way to draw text. Labels are used as components in m
 |multiline|`bool`. Defaults to `False`|label with multiple lines?|
 |command|`callable`. Defaults to `None`|command called when pressed|
 |parameters|`list`. Defaults to []|parameters used in command|
-|outline|`tuple`, `(color, padding, width)` Defaults to `None`|create outline surrounding label|
+|outline|`tuple`, `(color, padding, width)`. Defaults to `None`|create outline surrounding label|
 
 All properties, including others like `.alpha`, `document` (pyglet HTML document), `length` (length of text), and `height` can be accessed.
 
