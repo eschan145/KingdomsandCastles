@@ -301,6 +301,14 @@ Circumference: $P = \pi [3(a + b)-\sqrt(3a + b)(a + 3b)]$
 |color|`tuple`. Defaults to `BLACK`|color of triangle in RGB|
 
 #### Star
+NOTE: setting excessive amounts of spikes will cause glitches in drawing, as shown on the right. Two spikes will draw a diamond, while one spike will do nothing.
+
+Left: `Star(x=250, y=200, outer=40, inner=100, spikes=5, color=YELLOW_ORANGE)`
+
+Right: `Star(x=250, y=200, outer=30, inner=100, spikes=1000)`
+
+![image](https://user-images.githubusercontent.com/103769713/178081441-3154878f-910a-48ea-9ecf-bef74d46f7fe.png)![image](https://user-images.githubusercontent.com/103769713/178081289-0bc5d8df-0ad3-4840-9ff0-dcba2179360b.png)
+
 |Parameter||Details|
 |-|-|-|
 |x|`int`|x coordinate of star|
