@@ -244,6 +244,7 @@ Area: $A = lw$
 
 #### Circle
 Area: $A = \pi r^2$
+
 Circumference: $C = 2\pi r$
 
 |Parameter||Details|
@@ -256,7 +257,8 @@ Circumference: $C = 2\pi r$
 
 #### Ellipse
 Area: $A = \pi ab$
-Circumference: $P = \pi[3(a + b)-\sqrt((3a + b)(a + 3b))]$
+
+Circumference: $P = \pi [3(a + b)-\sqrt((3a + b)(a + 3b))]$
 
 |Parameter||Details|
 |-|-|-|
