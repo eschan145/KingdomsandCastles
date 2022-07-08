@@ -231,6 +231,8 @@ A slider's value can be taken with its property `.value`. Pressing the <kbd>←<
 The shapes toolkit is part of the GUI toolkit. Though not completed, it contains several different shapes.
 
 #### Rectangle
+Area: $A = lw$
+
 |Parameter||Details|
 |-|-|-|
 |x|`int`|x coordinate of rectangle|
@@ -241,6 +243,9 @@ The shapes toolkit is part of the GUI toolkit. Though not completed, it contains
 |colors|`tuple`, `(fill, border)`. Defaults to `(WHITE, BLACK)`|colors of rectangle in RGB|
 
 #### Circle
+Area: $A = \pi r^2$
+Circumference: $C = 2\pi r$
+
 |Parameter||Details|
 |-|-|-|
 |x|`int`|x coordinate of circle|
@@ -250,6 +255,9 @@ The shapes toolkit is part of the GUI toolkit. Though not completed, it contains
 |color|`tuple`. Defaults to `BLACK`|color of circle in RGB|
 
 #### Ellipse
+Area: $A = \pi ab$
+Circumference: $P = \pi[3(a + b)-\sqrt((3a + b)(a + 3b))]$
+
 |Parameter||Details|
 |-|-|-|
 |x|`int`|x coordinate of ellipse|
