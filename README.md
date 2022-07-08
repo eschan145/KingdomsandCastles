@@ -227,6 +227,48 @@ Components:
 
 A slider's value can be taken with its property `.value`. Pressing the <kbd>←</kbd> or <kbd>→</kbd> moves the slider by its numerical amount. Also, scrolling the slider can change its value.
 
+### Shapes Documentation
+The shapes toolkit is part of the GUI toolkit. Though not completed, it contains several different shapes.
+
+#### Rectangle
+|Parameter||Details|
+|-|-|-|
+|x|`int`|x coordinate of rectangle|
+|y|`int`|y coordinate of rectangle|
+|width|`int`|width of rectangle|
+|height|`int`|height of rectangle|
+|border|`int`, Defaults to 1|border size of rectangle|
+|colors|`tuple`, `(fill, border)`. Defaults to `(WHITE, BLACK)`|colors of rectangle in RGB|
+
+#### Circle
+|Parameter||Details|
+|-|-|-|
+|x|`int`|x coordinate of circle|
+|y|`int`|y coordinate of circle|
+|radius|`int`|radius of circle|
+|segments|`int`, Defaults to `None`|number of distinct segments. Calculated with `max(14, int(radius / 1.25))`|
+|color|`tuple`. Defaults to `BLACK`|color of circle in RGB|
+
+#### Ellipse
+|Parameter||Details|
+|-|-|-|
+|x|`int`|x coordinate of ellipse|
+|y|`int`|y coordinate of ellipse|
+|a|`int`|semi-major axes of the ellipse|
+|b|`int`|semi-minor axes of the ellipse|
+|color|`tuple`. Defaults to `BLACK`|color of ellipse in RGB|
+
+#### Sector
+|Parameter||Details|
+|-|-|-|
+|x|`int`|x coordinate of sector|
+|y|`int`|y coordinate of sector|
+|radius|`int`|radius of sector|
+|segments|`int`. Defaults to `None`|number of distinct segments. Calculated with `max(14, int(radius / 1.25))`|
+|angle|`int`, Defaults to `math.tau`|angle of sector in radians|
+|start|`int`, Defaults to 0|start angle of sector in radians|
+|color|`tuple`. Defaults to `BLACK`|color of sector in RGB|
+
 ### Contact the maintainer
 esamuelchan@gmail.com
 
