@@ -160,9 +160,9 @@ A label is a great and easy way to draw text. Labels are used as components in m
 |justify|`str`, (`LEFT`, `CENTER`, or `RIGHT`). Defaults to `LEFT`|justification of label|
 |width|`int`. Defaults to 0|maximum width of the label (used with `multiline`)|
 |multiline|`bool`. Defaults to `False`|label with multiple lines?|
-|checkbutton|`bool`. Defaults to `False`|checkbutton in front of label|
 |command|`callable`. Defaults to `None`|command called when pressed|
 |parameters|`list`. Defaults to []|parameters used in command|
+|outline|`tuple`, `(color, padding, width)` Defaults to `None`|create outline surrounding label|
 
 All properties, including others like `.alpha`, `document` (pyglet HTML document), `length` (length of text), and `height` can be accessed.
 
