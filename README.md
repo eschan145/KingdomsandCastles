@@ -239,7 +239,7 @@ Area: $A = lw$
 |y|`int`|y coordinate of rectangle|
 |width|`int`|width of rectangle|
 |height|`int`|height of rectangle|
-|border|`int`, Defaults to 1|border size of rectangle|
+|border|`int`. Defaults to 1|border size of rectangle|
 |colors|`tuple`, `(fill, border)`. Defaults to `(WHITE, BLACK)`|colors of rectangle in RGB|
 
 #### Circle
@@ -252,13 +252,13 @@ Circumference: $C = 2\pi r$
 |x|`int`|x coordinate of circle|
 |y|`int`|y coordinate of circle|
 |radius|`int`|radius of circle|
-|segments|`int`, Defaults to `None`|number of distinct segments. Calculated with `max(14, int(radius / 1.25))`|
+|segments|`int`. Defaults to `None`|number of distinct segments. Calculated with `max(14, int(radius / 1.25))`|
 |color|`tuple`. Defaults to `BLACK`|color of circle in RGB|
 
 #### Ellipse
 Area: $A = \pi ab$
 
-Circumference: $P = \pi [3(a + b)-\sqrt((3a + b)(a + 3b))]$
+Circumference: $P = \pi [3(a + b)-\sqrt(3a + b)(a + 3b)]$
 
 |Parameter||Details|
 |-|-|-|
@@ -275,9 +275,41 @@ Circumference: $P = \pi [3(a + b)-\sqrt((3a + b)(a + 3b))]$
 |y|`int`|y coordinate of sector|
 |radius|`int`|radius of sector|
 |segments|`int`. Defaults to `None`|number of distinct segments. Calculated with `max(14, int(radius / 1.25))`|
-|angle|`int`, Defaults to `math.tau`|angle of sector in radians|
-|start|`int`, Defaults to 0|start angle of sector in radians|
+|angle|`int`. Defaults to `math.tau`|angle of sector in radians|
+|start|`int`. Defaults to 0|start angle of sector in radians|
 |color|`tuple`. Defaults to `BLACK`|color of sector in RGB|
+
+#### Line
+|Parameter||Details|
+|-|-|-|
+|x1|`int`|x1 coordinate of line|
+|y1|`int`|y1 coordinate of line|
+|x2|`int`|x2 coordinate of line|
+|y2|`int`|y2 coordinate of line|
+|width|`int`|width of line|
+|color|`tuple`. Defaults to `BLACK`|color of line in RGB|
+
+#### Triangle
+|Parameter||Details|
+|-|-|-|
+|x1|`int`|x1 coordinate of triangle|
+|y1|`int`|y1 coordinate of triangle|
+|x2|`int`|x2 coordinate of triangle|
+|y2|`int`|y2 coordinate of triangle|
+|x3|`int`|x3 coordinate of triangle|
+|y3|`int`|y3 coordinate of triangle|
+|color|`tuple`. Defaults to `BLACK`|color of triangle in RGB|
+
+#### Star
+|Parameter||Details|
+|-|-|-|
+|x|`int`|x coordinate of star|
+|y|`int`|y coordinate of star|
+|outer|`int`|outer radius of star|
+|inner|`int`|inner radius of star|
+|spikes|`int`|number of spikes|
+|rotation|`int`|rotation of star in degrees|
+|color|`tuple`. Defaults to `BLACK`|color of star in RGB|
 
 ### Contact the maintainer
 esamuelchan@gmail.com
