@@ -266,6 +266,7 @@ A rectangle is the only shape that supports an implemented border. For other sha
 |height|`int`|height of rectangle|
 |border|`int`. Defaults to 1|border size of rectangle|
 |colors|`tuple`, `(fill, border)`. Defaults to `(WHITE, BLACK)`|colors of rectangle in RGB|
+|label|`str`. Defaults to `None`|label to add to center of rectangle|
 
 #### Circle
 A circle can become a regular n-sided polygon by changing its segments to the number of sides. It can be created by setting an ellipse's a and b to the same value.
@@ -348,6 +349,7 @@ NOTE: setting excessive amounts of spikes will cause glitches in drawing, as sho
 |rotation|`int`|rotation of star in degrees|
 |color|`tuple`. Defaults to `BLACK`|color of star in RGB|
 
+##
 ### Contact the maintainer
 esamuelchan@gmail.com
 
