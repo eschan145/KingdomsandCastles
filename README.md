@@ -228,10 +228,33 @@ Components:
 A slider's value can be taken with its property `.value`. Pressing the <kbd>←</kbd> or <kbd>→</kbd> moves the slider by its numerical amount. Also, scrolling the slider can change its value.
 
 ### Shapes Documentation
-The shapes toolkit is part of the GUI toolkit. Though not completed, it contains several different shapes.
+The shapes toolkit is part of the GUI toolkit. Though not completed, it contains several different shapes:
+- Rectangle
+- Circle
+- Ellipse
+- Sector
+- Line
+- Triangle
+- Star
+- Polygon
+- Arc
+More customizations are to be added in the future.
+- Setting radius for polygons, triangles, and rectangles
+- Gradients
+- Effects
+    - Shadow
+    - Glow
+
+![image](https://user-images.githubusercontent.com/103769713/178084276-8d075be6-5dd6-488a-9fa5-a6a87f4164b3.png)
 
 #### Rectangle
-Area: $A = lw$
+A rectangle is the only shape that supports an implemented border. For other shapes, you must draw a copy of it underneath the main shape.
+
+![image](https://user-images.githubusercontent.com/103769713/178083183-97668775-7a60-4ac7-9d32-619fe16f0808.png)![image](https://user-images.githubusercontent.com/103769713/178083412-6da41c0d-a39d-4a8d-a875-ed3bd39c7979.png)
+
+**Left**: `Rectangle(x=200, y=150, width=100, height=100)`
+
+**Right**: `Rectangle(x=200, y=150, width=100, height=100, border=30, colors=(RED, ORANGE_PEEL))` — Shows full border effect
 
 |Parameter||Details|
 |-|-|-|
@@ -243,9 +266,13 @@ Area: $A = lw$
 |colors|`tuple`, `(fill, border)`. Defaults to `(WHITE, BLACK)`|colors of rectangle in RGB|
 
 #### Circle
-Area: $A = \pi r^2$
+A circle can become a regular n-sided polygon by changing its segments to the number of sides. It can be created by setting an ellipse's a and b to the same value.
 
-Circumference: $C = 2\pi r$
+![image](https://user-images.githubusercontent.com/103769713/178083664-4d63b232-887f-4255-9307-a308bb449929.png)![image](https://user-images.githubusercontent.com/103769713/178083624-e61bf949-2496-4c58-8762-9cc6989f8857.png)
+
+**Left**: `Circle(x=250, y=200, radius=50, color=BLUE_YONDER)`
+
+**Right**: `Circle(x=250, y=200, radius=50, segments=7, color=BLUE_BELL)`
 
 |Parameter||Details|
 |-|-|-|
@@ -256,9 +283,7 @@ Circumference: $C = 2\pi r$
 |color|`tuple`. Defaults to `BLACK`|color of circle in RGB|
 
 #### Ellipse
-Area: $A = \pi ab$
-
-Circumference: $P = \pi [3(a + b)-\sqrt(3a + b)(a + 3b)]$
+An ellipse can also be called an oval.
 
 |Parameter||Details|
 |-|-|-|
@@ -269,6 +294,8 @@ Circumference: $P = \pi [3(a + b)-\sqrt(3a + b)(a + 3b)]$
 |color|`tuple`. Defaults to `BLACK`|color of ellipse in RGB|
 
 #### Sector
+A sector is a slice of a circle. It is the most complex of the shapes.
+
 |Parameter||Details|
 |-|-|-|
 |x|`int`|x coordinate of sector|
@@ -303,11 +330,11 @@ Circumference: $P = \pi [3(a + b)-\sqrt(3a + b)(a + 3b)]$
 #### Star
 NOTE: setting excessive amounts of spikes will cause glitches in drawing, as shown on the right. Two spikes will draw a diamond, while one spike will do nothing.
 
-Left: `Star(x=250, y=200, outer=40, inner=100, spikes=5, color=YELLOW_ORANGE)`
-
-Right: `Star(x=250, y=200, outer=30, inner=100, spikes=1000)`
-
 ![image](https://user-images.githubusercontent.com/103769713/178081441-3154878f-910a-48ea-9ecf-bef74d46f7fe.png)![image](https://user-images.githubusercontent.com/103769713/178081289-0bc5d8df-0ad3-4840-9ff0-dcba2179360b.png)
+
+**Left**: `Star(x=250, y=200, outer=40, inner=100, spikes=5, color=YELLOW_ORANGE)`
+
+**Right**: `Star(x=250, y=200, outer=30, inner=100, spikes=1000)`
 
 |Parameter||Details|
 |-|-|-|
