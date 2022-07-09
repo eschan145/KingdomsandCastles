@@ -238,7 +238,9 @@ The shapes toolkit is part of the GUI toolkit. Though not completed, it contains
 - Star
 - Polygon
 - Arc
+
 More customizations are to be added in the future.
+
 - Setting radius for polygons, triangles, and rectangles
 - Gradients
 - Effects
