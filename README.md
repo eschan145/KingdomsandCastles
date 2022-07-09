@@ -76,7 +76,7 @@ This file contains geometric functions to be used in Armies.
 ### GUI Documentation
 Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
 
-The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
+The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. API is provided to create your own widgets, which can subclass the `Widget` base class. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
 To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`. Calling `destroy()` on a widget disconnects it from the event framework and removes it from the container. `check_collision(x, y)` sees if the `x` and `y` point is colliding with the widget. If that fails, use `_check_collision(x, y)`.
 
@@ -349,7 +349,47 @@ NOTE: setting excessive amounts of spikes will cause glitches in drawing, as sho
 |rotation|`int`|rotation of star in degrees|
 |color|`tuple`. Defaults to `BLACK`|color of star in RGB|
 
-##
+#### Create your own widgets
+It is super easy to create your own widgets. All you need is to subclass the `Widget` class, which will provide all of the events. You need to specify its parameters.
+```
+class MyWidget(Widget):
+    
+    def __init__(self, size, text):
+        self.image = Image("file.png")
+        
+        Widget.__init__(self)
+        
+        self.size = size
+        self.text = text
+        
+        self.activated = False
+```
+
+Let's look at the above code. In line 1—3 we set up the actual subclassing of the widget class. In line 4, we create our component for the widget. Note that not all widgets need to have components, just they are required for more complex widgets. We then initialize the parent `Widget` class by calling its `__init__` function. A widget starting off takes several parameters: image (if none provided a blank one is used), scale (scaling of widget), and frame, which can be specified in the widget's parameters if you want to use it. On line 11 we create an `activated` property, which is required for a widget or a `ValueError` will be raised when calculating its hitbox.
+
+```
+    def func(self):
+        pass
+```
+
+If you are going to create any public functions, create them right after the `__init__` method and before the events. (Internal functions like `__del__` are to be added even before those public functions). After that, you create the events. Any one of the event types can be used. Just make sure to specify the correct amount of parameters. The `draw` function always goes first, and the `update` function last.
+
+```
+    def draw(self):
+        self.image.draw()
+        
+        self.component = self.image
+        self.activated = True
+        
+    def on_press(self, x, y, buttons, modifiers):
+        """Called when the widget is pressed"""
+        
+        if not self.activated or self.disable:
+            return
+```
+
+The `draw` function is only supposed to hold drawing commands, not defining variables, checking widget states, or stuff like that. Those are to be done in the `update` function. You must set the widget's component during the draw function. Also, set `self.activated` to True at the end. Make sure you check if the widget is activated or not disabled before every event. If those are true, then return and stop the function.
+
 ### Contact the maintainer
 esamuelchan@gmail.com
 
