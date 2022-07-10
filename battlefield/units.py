@@ -1,21 +1,19 @@
-from random import choice, randint
-from arcade import Window, draw_rectangle_filled, draw_rectangle_outline, get_window
+from arcade import draw_rectangle_outline, get_window
 from pyglet.event import EventDispatcher
+from random import choice
 
-import sys # Use full imports: may have three path variables
 import os
-
+import sys # Use full imports: may have three path variables
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
   
 sys.path.append(parent)
 
-from variables import Arrow, Soldier
-from constants import *
 from color import RED
-from geometry import chance, Point, get_closest
+from constants import *
 from key import KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_UP, Keys
+from variables import Arrow, Soldier
 
 
 class Unit(EventDispatcher):
