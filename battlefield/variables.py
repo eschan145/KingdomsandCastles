@@ -1,30 +1,18 @@
-"""Contains variables used throughout the battlefield (Pun not intended)"""
-
-from arcade import SpriteList, get_angle_degrees
-from arcade import get_window
-
-from pyglet.event import EventDispatcher
+"""Contains variables used throughout the battlefield"""
 
 import os
 import sys
-
-from scipy import rand
-
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
   
 sys.path.append(parent)
 
-from sprite import Object
-
-from geometry import Point, chance, check_collision, get_closest, get_angle_degrees
-
-from random import choice, randint, uniform
-
-from file import soldier, projectile
-
 from constants import *
+from file import soldier, projectile
+from geometry import Point, chance, check_collision, get_closest
+from random import choice, randint
+from sprite import Object
 
 
 class Arrow(Object):
@@ -38,14 +26,11 @@ class Arrow(Object):
         
         """
 
-        Object.__init__(self, projectile["arrow"])
+        Object.__init__(self, projectile["arrow"], 0.8)
 
         self.x = shooter.x
         self.y = shooter.y
 
-        self.angle = shooter.angle
-
-        self.destination_point = shooter.x, shooter.y
         self.rot_speed = 2**32
 
         self.shooter = shooter
@@ -64,9 +49,10 @@ class Arrow(Object):
 
             self.accuracy_x = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
             self.accuracy_y = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
-
         
-        self.point = Point(self.target.x + self.accuracy_x, self.target.y + self.accuracy_y)
+        self.point = Point(self.target.x + self.accuracy_x,
+                           self.target.y + self.accuracy_y)
+        self.destination_point = self.point.x, self.point.y
 
         self.window.projectile_list.append(self)
 
@@ -123,7 +109,7 @@ class Soldier(Object):
         else:
             image = soldier["enemy_light_infantry"]
 
-        Object.__init__(self, image)
+        Object.__init__(self, image, 0.5)
 
         self.allegiance = allegiance
         self.rivals = rivals
@@ -144,7 +130,7 @@ class Soldier(Object):
 
     def on_attack(self):
         distance = get_closest(self, self.rivals)
-
+        
         if chance(5):
             self.strength -= 1
 
@@ -158,7 +144,7 @@ class Soldier(Object):
         else:
             self.weapon = RANGE
 
-            if self.arrows > 0:
+            if self.arrows:
                 arrow = Arrow(self, choice(self.rivals))
 
     def update(self):
@@ -173,20 +159,10 @@ class Soldier(Object):
                 self.follow(self.target, rate=5, speed=1.5)
 
         for enemy in self.rivals:
-            if enemy.health > 0: # Enemy dead
+            if enemy.health > 0: # Enemy still alive
+                rate = 15000
                 if self.archer: rate = 10000
-                else: rate = 15000
-                if chance(rate) and len(self.window.projectile_list) < 20:
-                    self.on_attack() # TODO: add interval of attack
-        
-        # if self.allegiance == PLAYER:
-        #     list = self.window.player_list
-        # else:
-        #     list = self.window.enemy_list
-        
-        for enemy in check_collision(self, self.rivals):
-            if chance(5) and self.change_x:
-                enemy.y += 1
-            
-
-                    
+                
+                if len(self.window.projectile_list) < 20:
+                    if chance(rate):
+                        self.on_attack()
