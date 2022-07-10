@@ -1,16 +1,19 @@
+"""GUI interface and widgets. Documentation and details can be found at:
+https://github.com/eschan145/Armies/blob/main/README.md"""
+
+from cmath import tau
 from arcade import create_rectangle_filled, draw_rectangle_outline, \
-     draw_rectangle_filled, enable_timings,  get_fps, get_window, \
-     load_texture, run,schedule, unschedule
+    enable_timings, get_four_byte_color,  get_fps, get_window, \
+    load_texture, run, schedule, unschedule
 from arcade import Sprite, SpriteList, Text, Window
 
-from color import BLACK, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, RED, WHITE
-from color import four_byte
+from color import BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, RED, WHITE
+from color import four_byte, scale_color
 from constants import BOTTOM, CENTER, DEFAULT_FONT, DISABLE_ALPHA, \
      ENTRY_BLINK_INTERVAL, LEFT, MULTIPLE, SINGLE, SLIDER_VELOCITY, \
-     TOGGLE_FADE, TOGGLE_VELOCITY, TOP
+     TOGGLE_FADE, TOGGLE_VELOCITY, TOP, VERTICAL
 from file import button, entry_normal, knob, none, slider_horizontal, \
      toggle_false, toggle_true, toggle_false_hover, toggle_true_hover
-from geometry import Point
 from key import ENTER, KEY_LEFT, KEY_RIGHT, \
      MOUSE_BUTTON_LEFT, SHIFT, SPACE, TAB
 from key import Keys
@@ -19,6 +22,7 @@ from pyglet.event import EventDispatcher
 from pyglet.text import decode_text
 from pyglet.text.caret import Caret
 from pyglet.text.layout import IncrementalTextLayout
+from pyglet.shapes import BorderedRectangle, Circle, Ellipse, Line, Triangle, Sector, Star, Polygon, Arc
 
 
 MAX = 2**32
@@ -35,7 +39,8 @@ def delete(start, end, text):
 
 
 class Container(EventDispatcher):
-    def __init__(self, window=None, shadow=True):
+
+    def __init__(self, window=None, shadow=False):
         EventDispatcher.__init__(self)
 
         self.focus = None
@@ -49,8 +54,6 @@ class Container(EventDispatcher):
         
         self.window.push_handlers(self.on_key_press)
 
-        self.window.background_color = WHITE
-        
     def append(self, widget):
         self.widgets.append(widget)
 
@@ -61,10 +64,15 @@ class Container(EventDispatcher):
             widget.draw()
             widget.frame.draw()
 
-##            if self.shadow:
-##                draw_rectangle_filled(widget.x, widget.y,
-##                                      widget.width + 1, widget.height + 1,
-##                                      BLACK)
+            shade = 1
+            
+            if self.shadow:
+                for i in range(1, 100):
+                    shade += 0.01
+                    print(scale_color(self.shadow, int(shade)))
+                    draw_rectangle_outline(widget.x, widget.y,
+                                            widget.width + 1, widget.height + 1,
+                                            RED)
 
     def draw_bbox(self, width=1, padding=0):
         for widget in self.widgets: widget.draw_bbox(width, padding)
@@ -104,6 +112,7 @@ class Container(EventDispatcher):
 
 
 class Frame:
+
     def __init__(self, x, y, width=200, height=200, direction=BOTTOM):
         self.x = x
         self.y = y
@@ -128,6 +137,7 @@ class Frame:
 
     
 class Widget(Sprite, EventDispatcher):
+    """Base widget class"""
     
     def __init__(self, image=none, scale=1.0, frame=None):
         Sprite.__init__(self, image, scale)
@@ -264,10 +274,10 @@ class Widget(Sprite, EventDispatcher):
     def on_mouse_motion(self, x, y, dx, dy):
         if self.disable:
             return
-        
+
         if self.check_collision(x, y):
             self.hover = True
-            
+
             self.dispatch_event("on_hover", x, y, dx, dy)
         else:
             self.hover = False
@@ -275,7 +285,7 @@ class Widget(Sprite, EventDispatcher):
     def on_mouse_press(self, x, y, buttons, modifiers):
         if self.disable:
             return
-        
+
         if self.check_collision(x, y):
             self.press = True
             self.focus = True
@@ -378,11 +388,14 @@ class Image(Widget):
         
    
 class Label(Widget):
+    """Label widget to draw and display HTML text"""
     
     def __init__(self, text, x, y, frame=None,
                  colors=[BLACK, (COOL_BLACK, DARK_SLATE_GRAY, DARK_GRAY)],
                  font=DEFAULT_FONT, title=False,
                  justify=LEFT, width=0, multiline=False,
+                 command=None, parameters=[],
+                 outline=None
                 ):
         
         # For new arcade installations, change the self.label property in
@@ -422,22 +435,62 @@ class Label(Widget):
         self.justify = justify
         self.width = width
         self.multiline = multiline
+        self.command = command
+        self.parameters = parameters
+        self.outline = outline
+
+        self.keys = []
     
         self.activated = False
 
         self.document = None
         self.length = 0
+
+    def bind(self, *keys):
+        self.keys = [*keys]
+        return self.keys
+
+    def unbind(self, *keys):
+        for key in keys:
+            self.keys.remove(key)
+        return self.keys
+    
+    def draw_bbox(self, width=1, padding=0):
+        """Overrides the Widget.bbox because of anchor_x"""
+        draw_rectangle_outline(
+            self.x + self.width / 2,
+            self.y, self.width + padding,
+            self.height + padding, RED, width
+        )
+        
+    def invoke(self):
+        if self.disable or not self.command:
+            return
+        
+        self.press = True
+        
+        if self.parameters:
+            self.command(*self.parameters)
+        else:
+            self.command()
         
     def draw(self):
         self.label.draw()
         
-        self.width = self.label._label.content_width
-        self.height = self.label._label.content_height
+        self.width = self.label.content_width
+        self.height = self.label.content_height
 
         if self.text == "Label":
             self.label.visible = False
         else:
             self.label.visible = True
+        
+        if self.outline:
+            draw_rectangle_outline(
+                self.x + self.width / 2, self.y, self.width + self.outline[1],
+                self.height + self.outline[1], self.outline[0],
+                self.outline[2]
+            )
 
         self._left = self.label.left
         self._right = self.label.right
@@ -445,6 +498,22 @@ class Label(Widget):
         self._bottom = self.label.bottom
         
         self.activated = True
+
+    def on_key(self, keys, modifiers):
+        if isinstance(self.keys, list):
+            if keys in self.keys:
+                self.invoke()
+
+        else:
+            if self.keys == keys:
+                self.invoke()
+
+    def on_press(self, x, y, buttons, modifiers):
+        if self.disable or not self.command:
+            return
+
+        if buttons == MOUSE_BUTTON_LEFT:
+            self.invoke()
 
     def update(self):
         if not self.activated:
@@ -490,6 +559,7 @@ class Label(Widget):
 
         
 class Button(Widget):
+    """Button widget to invoke and call commands"""
     
     def __init__(
                  self, text, x, y, command=None, parameters=[], 
@@ -598,6 +668,7 @@ class Button(Widget):
 
 
 class Toggle(Widget):
+    """Toggle widget to switch between true and false values"""
     
     def __init__(
                  self, text, x, y,
@@ -621,7 +692,7 @@ class Toggle(Widget):
         self.label = Label(knob, x, y, font=font)
                 
         Widget.__init__(self)
-        
+             
         self.text = text
         self.x = x
         self.y = y
@@ -680,7 +751,7 @@ class Toggle(Widget):
         else:
             self.value = False
 
-        if self.switch:
+        if self.switch and not self.disable:
             if self.on_left:
                 # Knob on the left, moving towards the right
                 if self.knob.right < self.bar.right - 2:
@@ -738,9 +809,10 @@ class Toggle(Widget):
 
 
 class Slider(Widget):
+    """Slider widget to display slidable values"""
     
     def __init__(self, text, x, y, colors=BLACK, font=DEFAULT_FONT,
-                 size=10, length=200, padding=50):
+                 size=10, length=200, padding=50, orient=VERTICAL):
         
         self.bar = Image(slider_horizontal, x, y)
         self.knob = Image(knob, x, y)
@@ -756,6 +828,7 @@ class Slider(Widget):
         self.size = size
         self.length = length
         self.padding = padding
+        self.orient = orient
         
         self.knob.left = self.bar.x - self.length / 2
         self.label.x = self.bar.left - self.padding
@@ -825,8 +898,9 @@ class Slider(Widget):
         self.bar.update()
         self.knob.update()
 
-        
+ 
 class Caret(Caret):
+    """Caret used for pyglet.text.IncrementalTextLayout"""
     def _update(self, line=None, update_ideal_x=True):
         if line is None:
             line = self._layout.get_line_from_position(self._position)
@@ -855,8 +929,9 @@ class Caret(Caret):
 
 
 class Entry(Widget):
+    """Entry widget to display user-editable text."""
 
-    def __init__(self, x, y, text="f", font=DEFAULT_FONT):
+    def __init__(self, x, y, text="", font=DEFAULT_FONT, color=BLACK):
         self.document = decode_text(text)
         
         self.layout = IncrementalTextLayout(self.document, 190, 25)
@@ -874,6 +949,10 @@ class Entry(Widget):
         self.blinking = True
         self.index = 0
         self.length = 0
+
+        self.document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
+                                              font_size=DEFAULT_FONT[1],
+                                              color=get_four_byte_color(color)))
 
         self.window.push_handlers(
             self.on_text,
@@ -917,11 +996,6 @@ class Entry(Widget):
             self.layout.draw()
 
         self.component = self.image
-
-    def on_key(self, keys, modifiers):
-        if keys == ENTER:
-            self.delete(self.length - 1, self.length)
-            self.focus = False
 
     def on_focus(self):
         if self.get() == self.default:
@@ -978,55 +1052,264 @@ class Entry(Widget):
 
             unschedule(self.blink)
 
-        
-##class Entry(Widget, EventDispatcher):
-##    
-##    def __init__(self, x, y, default="Enter here", validate=string.printable,
-##                 font=DEFAULT_FONT):
-##        
-##        self.image = Image(entry_normal, x, y)
-##        self.input = Input(default, x - self.image.width / 2 + 5, y - 15, font)
-##        
-##        Widget.__init__(self)
-##
-##        self.x = x
-##        self.y = y
-##        self.default = default
-##        self.font = font
-##
-##        self.hover = False
-##        self.focus = False
-##        self.disable = False
-##
-##        self.text = default
-##        self.index = len(default)
-##        self.length = 0
-##        
-##        self.activated = False
-##
-##    def draw(self):
-##        self.image.draw()
-##        self.input.draw()
-##
-##        self.input.x = self.x
-##        self.input.y = self.y
-##        self.input.font = self.font
-##        self.input.align = [LEFT, CENTER]
-##        
-##        self.input.focus = self.focus
-##        
-##        self.component = self.image
-##        
-##        self.activated = True
 
+class Combobox(Widget):
+    """Combobox widget to display drop-down list of selectable elements"""
+
+    def __init__(self, options=[]): pass
+
+
+class Shape(Widget):
+    """Primitive drawing shape"""
+
+    def __init__(self):
+        Widget.__init__(self)
+
+    def delete(self):
+        self.shape.delete()
+
+    def draw(self):
+        with self.window.ctx.pyglet_rendering():
+            self.shape.draw()
+    
+    def update(self):
+        self.shape.width = self.width
+        self.shape.opacity = self.alpha
+        self.shape.rotation = self.angle
+
+        if isinstance(self, Rectangle):
+            self.shape._color = self.colors[0]
+            self.shape._brgb = self.colors[1]
+        else:
+            self.shape.color = self.color
         
+        if not isinstance(self, Line) or \
+            isinstance(self, Triangle) or \
+            isinstance(self, Star):
+            self.shape.x = self.x
+            self.shape.y = self.y
+            self.shape.height = self.height
+
+_Circle = Circle
+_Ellipse = Ellipse
+_Sector = Sector
+_Line = Line
+_Triangle = Triangle
+_Star = Star
+_Polygon = Polygon
+_Arc = Arc
+
+
+class Rectangle(Shape):
+
+    def __init__(self, x, y, width, height, border=1,
+                 colors=(WHITE, BLACK), label=None):
+        
+        self.shape = BorderedRectangle(
+                            x, y, width, height,
+                            border, colors[0], colors[1]
+                        )
+
+        Shape.__init__(self) # Do this after defining self.shape
+
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.border = border
+        self.colors = colors
+        self.label = label
+
+    def update(self):
+        self.shape._border = self.border
+
+        if self.label:
+            self.label.x = self.x + self.width / 2
+            self.label.y = self.y + self.height / 2
+    
+
+class Circle(Shape):
+
+    def __init__(self, x, y, radius, segments=None, color=BLACK):
+        self.shape = _Circle(x, y, radius, segments, color)
+
+        Shape.__init__(self)
+
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.segments = segments
+        self.color = color
+
+    def update(self):
+        self.shape.radius = self.radius
+
+
+class Ellipse(Shape):
+
+    def __init__(self, x, y, a, b, color=BLACK):
+       self.shape = _Ellipse(x, y, a, b, color)
+
+       Shape.__init__(self)
+
+       self.x = x
+       self.y = y
+       self.a = a
+       self.b = b
+       self.color = color
+    
+    def update(self):
+        self.shape.a = self.a
+        self.shape.b = self.b
+
+
+Oval = Ellipse
+
+
+class Sector(Shape):
+
+    def __init__(self, x, y, radius, segments=None,
+                 angle=tau, start=0, color=BLACK):
+    
+        self.shape = _Sector(x, y, radius, segments, angle, start, color)
+
+        Shape.__init__(self)
+
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.segments = segments
+        self.rotation = angle
+        self.start = start
+        self.color = color
+
+    def update(self):
+        self.shape.angle = self.rotation
+        self.shape.start_angle = self.start
+        self.shape.radius = self.radius
+
+
+class Line(Shape):
+
+    def __init__(self, x1, y1, x2, y2, width=1, color=BLACK):
+        self.shape = _Line(x1, y1, x2, y2, width, color)
+
+        Shape.__init__(self)
+
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.width = width
+        self.color = color
+    
+    def update(self):
+        self.shape.x = self.x1
+        self.shape.y = self.y1
+        self.shape.x2 = self.x2
+        self.shape.y2 = self.y2
+
+
+class Triangle(Shape):
+
+    def __init__(self, x1, y1, x2, y2, x3, y3, color=BLACK):
+        self.shape = _Triangle(x1, y2, x2, y2, x2, y2, color)
+
+        Shape.__init__(self)
+
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.x3 = x3
+        self.y3 = y3
+        self.color = color
+
+    def update(self):
+        self.shape.x = self.x1
+        self.shape.y = self.y1
+        self.shape.x2 = self.x2
+        self.shape.y2 = self.y2
+        self.shape.x3 = self.x3
+        self.shape.y3 = self.y3
+
+
+class Star(Shape):
+
+    def __init__(self, x, y, outer, inner,
+                 spikes=5, rotation=0, color=BLACK):
+
+        self.shape = _Star(x, y, outer, inner, spikes, rotation, color)
+
+        Shape.__init__(self)
+
+        self.x = x
+        self.y = y
+        self.outer = outer
+        self.inner = inner
+        self.spikes = spikes
+        self.rotation = rotation
+        self.color = color
+
+    def update(self):
+        self.shape.outer_radius = self.outer
+        self.shape.inner_radius = self.inner
+        self.shape.num_spikes = self.spikes
+
+
+class Polygon(Shape):
+    
+    def __init__(self, *coordinates, color=BLACK):
+        self.shape = _Polygon(*coordinates, color)
+
+        Shape.__init__(self)
+
+        self.coordinates = list(coordinates)
+        self.color = color
+    
+    def update(self):
+        self.shape.coordinates = self.coordinates
+        self.shape.color = self.color
+        self.shape.x = self.x
+        self.shape.y = self.y
+
+
+class Arc(Shape):
+
+    def __init__(self, x, y, radius, segments=None,
+                 angle=tau, start=0, closed=False, color=BLACK):
+        self.shape = _Arc(x, y, radius, segments, angle, start, closed, color)
+        
+        Shape.__init__(self)
+
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.segments = segments
+        self.rotation = angle
+        self.start = start
+        self.closed = closed
+        self.color = color
+    
+    def update(self):
+        self.shape.radius = self.radius
+        self.shape.segments = self.segments
+        self.shape.angle = self.rotation
+        self.shape.start = self.start
+        self.shape.closed = self.closed
+        
+
 class MyWindow(Window):
     def __init__(self, title, width, height):
-        super().__init__(
-            width, height, title
+        Window.__init__(
+            self, width, height, title, style=Window.WINDOW_STYLE_DIALOG
         )
+        from file import blank1, blank2
+        from pyglet.image import load
 
         self.container = Container()
+
+        self.set_icon(load(blank1), load(blank2))
 
         self.label = Label(
             "Label",
@@ -1055,13 +1338,22 @@ class MyWindow(Window):
             250,
             160)
         
+        self.circle = Circle(
+            100, 
+            150,
+            50,
+            color=BLUE_YONDER)
+        
         self.container.append(self.label)
         self.container.append(self.button)
         self.container.append(self.toggle)
         self.container.append(self.slider)
         self.container.append(self.entry)
+        self.container.append(self.circle)
         
         self.button.bind(ENTER)
+
+        self.background_color = WHITE
 
     def click(self):
         print(self.entry.get())
@@ -1078,6 +1370,7 @@ class MyWindow(Window):
 
         self.slider.text = str(self.slider.value)
 
+
 if __name__ == "__main__":
-    window = MyWindow("Button", 500, 400)
+    window = MyWindow(" ", 500, 400)
     run()
