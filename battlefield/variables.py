@@ -1,4 +1,4 @@
-"""Contains variables used throughout the battlefield"""
+"""Contains variables used throughout the battlefield (pun not intended)"""
 
 import os
 import sys
