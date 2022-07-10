@@ -1,5 +1,5 @@
-from arcade import SpriteList, Window, close_window, draw_rectangle_filled, draw_rectangle_outline
-from arcade import draw_point, enable_timings, get_fps, run
+from arcade import SpriteList, Window, close_window
+from arcade import get_fps, run
 
 import os
 import sys
@@ -9,15 +9,13 @@ parent = os.path.dirname(current)
   
 sys.path.append(parent)
 
+from color import WHITE
 from constants import *
-from color import RED, WHITE
-from widgets import Container, Frame, Label, Toggle
+from key import Q, W
+from widgets import Container, Frame, Label
 
 from units import Unit
-from variables import Arrow, Soldier
-from key import Q, W
 
-# enable_timings()
 
 class Battlefield(Window):
 
@@ -43,19 +41,16 @@ class Battlefield(Window):
                                 UNIT_FRAME_WIDTH, UNIT_FRAME_HEIGHT, TOP)
         self.unit_frame.top = 0
         
-        self.unit_move_forward = Toggle("Move forwards", 10, 20)
         self.unit_organize_volley = Label("Organize volley", 10, 40, self.unit_frame,
                                           command=self.command, parameters=["volley"])
-        
 
         self.container.append(self.fps)
-        self.container.append(self.unit_move_forward)
         self.container.append(self.unit_organize_volley)
 
         self.unit_organize_volley.bind(Q)
 
         self.background_color = WHITE
-    
+
     def command(self, attack):
         if attack == "volley":
             self.current_unit.on_volley()
