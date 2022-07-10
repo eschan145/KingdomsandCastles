@@ -113,4 +113,3 @@ class Unit(EventDispatcher):
             elif self.keys[KEY_DOWN]: soldier.y -= 1
             if self.keys[KEY_RIGHT]: soldier.x += 1
             elif self.keys[KEY_LEFT]: soldier.x -= 1
-        
