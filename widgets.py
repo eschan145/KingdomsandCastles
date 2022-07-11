@@ -1,20 +1,21 @@
 """GUI interface and widgets. Documentation and details can be found at:
 https://github.com/eschan145/Armies/blob/main/README.md"""
 
-from cmath import tau
+
 from arcade import create_rectangle_filled, draw_rectangle_outline, \
     enable_timings, get_four_byte_color,  get_fps, get_window, \
-    load_texture, run, schedule, unschedule
+    load_texture, run, schedule, set_window, unschedule
 from arcade import Sprite, SpriteList, Text, Window
+from cmath import tau
 
-from color import BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, RED, WHITE
+from color import BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, GRAY, GRAY_BLUE, RED, WHITE
 from color import four_byte, scale_color
 from constants import BOTTOM, CENTER, DEFAULT_FONT, DISABLE_ALPHA, \
      ENTRY_BLINK_INTERVAL, LEFT, MULTIPLE, SINGLE, SLIDER_VELOCITY, \
-     TOGGLE_FADE, TOGGLE_VELOCITY, TOP, VERTICAL
+     TOGGLE_FADE, TOGGLE_VELOCITY, TOP, VERTICAL, X, Y
 from file import button, entry_normal, knob, none, slider_horizontal, \
      toggle_false, toggle_true, toggle_false_hover, toggle_true_hover
-from key import ENTER, KEY_LEFT, KEY_RIGHT, \
+from key import A, CONTROL, ENTER, KEY_LEFT, KEY_RIGHT, \
      MOUSE_BUTTON_LEFT, SHIFT, SPACE, TAB
 from key import Keys
 
@@ -487,15 +488,17 @@ class Label(Widget):
         
         if self.outline:
             draw_rectangle_outline(
-                self.x + self.width / 2, self.y, self.width + self.outline[1],
-                self.height + self.outline[1], self.outline[0],
-                self.outline[2]
+                self.x + self.width / 2, self.y,
+                self.width + self.outline[1],
+                self.height + self.outline[1],
+                self.outline[0], self.outline[2]
             )
 
-        self._left = self.label.left
-        self._right = self.label.right
-        self._top = self.label.top
-        self._bottom = self.label.bottom
+        if self.text:
+            self._left = self.label.left
+            self._right = self.label.right
+            self._top = self.label.top
+            self._bottom = self.label.bottom
         
         self.activated = True
 
@@ -541,7 +544,11 @@ class Label(Widget):
 
         self.document = self.label._label.document
         self.length = len(self.text)
-            
+        
+        if "<u" in self.text and "<\\u>":
+            # ValueError: Can only assign sequence of same size
+            return
+
         # States
         if self.hover:
             self.document.set_style(0, self.length,
@@ -929,12 +936,16 @@ class Caret(Caret):
 
 
 class Entry(Widget):
-    """Entry widget to display user-editable text."""
+    """Entry widget to display user-editable text.
+    
+    PROBLEMS:
+        - Caret not showing on line start
+        """
 
     def __init__(self, x, y, text="", font=DEFAULT_FONT, color=BLACK):
         self.document = decode_text(text)
         
-        self.layout = IncrementalTextLayout(self.document, 190, 25)
+        self.layout = IncrementalTextLayout(self.document, 190, 24)
 
         self.caret = Caret(self.layout)
         self.image = Image(entry_normal, x, y)
@@ -949,6 +960,7 @@ class Entry(Widget):
         self.blinking = True
         self.index = 0
         self.length = 0
+        self.select_all = True
 
         self.document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
                                               font_size=DEFAULT_FONT[1],
@@ -986,16 +998,28 @@ class Entry(Widget):
         
         self.layout.width = 190
 
-        self.layout.x = self.x - self.layout.width / 2
-        self.layout.y = self.y - 2
+        try:
+            self.layout.x = self.x - self.layout.width / 2 + 1
+            self.layout.y = self.y - 2
         
-        self.layout.anchor_x = LEFT
-        self.layout.anchor_y = CENTER
-
+            self.layout.anchor_x = LEFT
+            self.layout.anchor_y = CENTER
+        
+        except: # Too many different errors
+            pass
+        
         with get_window().ctx.pyglet_rendering():
             self.layout.draw()
 
         self.component = self.image
+
+    def on_key(self, keys, modifiers):
+        if keys == A and modifiers & CONTROL:
+            self.caret.position = 0
+            self.caret.mark = self.length
+            self.caret._update()
+
+            self.select_all = True
 
     def on_focus(self):
         if self.get() == self.default:
@@ -1007,10 +1031,15 @@ class Entry(Widget):
             self.caret.on_text(text)
             
             self.index = self.caret.position
+
+            self.select_all = False
             
     def on_text_motion(self, motion):
         if self.focus:
-            self.caret.on_text_motion(motion)
+            try:
+                self.caret.on_text_motion(motion)
+            except AssertionError: # assert self.glyphs
+                pass
 
             self.index = self.caret.position
 
@@ -1026,10 +1055,15 @@ class Entry(Widget):
         self.index = self.caret.position
 
     def on_drag(self, x, y, dx, dy, buttons, modifiers):
-        if self.focus:
+        if self.press:
             self.caret.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
 
             self.index = self.caret.position
+        else:
+            if self.focus:
+                self.caret.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
+
+                self.index = self.caret.position
         
     def update(self):
         self.caret.position = self.index
@@ -1073,22 +1107,9 @@ class Shape(Widget):
             self.shape.draw()
     
     def update(self):
-        self.shape.width = self.width
         self.shape.opacity = self.alpha
         self.shape.rotation = self.angle
 
-        if isinstance(self, Rectangle):
-            self.shape._color = self.colors[0]
-            self.shape._brgb = self.colors[1]
-        else:
-            self.shape.color = self.color
-        
-        if not isinstance(self, Line) or \
-            isinstance(self, Triangle) or \
-            isinstance(self, Star):
-            self.shape.x = self.x
-            self.shape.y = self.y
-            self.shape.height = self.height
 
 _Circle = Circle
 _Ellipse = Ellipse
@@ -1121,16 +1142,22 @@ class Rectangle(Shape):
         self.label = label
 
     def update(self):
-        self.shape._border = self.border
+        self.shape.x = self.x - self.width / 2
+        self.shape.y = self.y - self.height / 2
+        self.shape.width = self.width
+        self.shape.height = self.height
+        self.shape.color = self.colors[0]
+        self.shape.border_color = self.color[1]
+        self.shape.border = self.border
 
         if self.label:
             self.label.x = self.x + self.width / 2
             self.label.y = self.y + self.height / 2
-    
+
 
 class Circle(Shape):
 
-    def __init__(self, x, y, radius, segments=None, color=BLACK):
+    def __init__(self, x, y, radius, segments=5, color=BLACK):
         self.shape = _Circle(x, y, radius, segments, color)
 
         Shape.__init__(self)
@@ -1142,7 +1169,11 @@ class Circle(Shape):
         self.color = color
 
     def update(self):
+        self.shape.x = self.x
+        self.shape.y = self.y
         self.shape.radius = self.radius
+        self.shape.segments = self.segments
+        self.shape.color = self.color
 
 
 class Ellipse(Shape):
@@ -1159,8 +1190,11 @@ class Ellipse(Shape):
        self.color = color
     
     def update(self):
+        self.shape.x = self.x
+        self.shape.y = self.y
         self.shape.a = self.a
         self.shape.b = self.b
+        self.shape.color = self.color
 
 
 Oval = Ellipse
@@ -1184,9 +1218,13 @@ class Sector(Shape):
         self.color = color
 
     def update(self):
-        self.shape.angle = self.rotation
-        self.shape.start_angle = self.start
+        self.shape.x = self.x
+        self.shape.y = self.y
         self.shape.radius = self.radius
+        self.shape.segments = self.segments
+        self.shape.rotation = self.angle
+        self.shape.start = self.start
+        self.shape.color = self.color
 
 
 class Line(Shape):
@@ -1204,10 +1242,12 @@ class Line(Shape):
         self.color = color
     
     def update(self):
-        self.shape.x = self.x1
-        self.shape.y = self.y1
+        self.shape.x1 = self.x1
+        self.shape.y1 = self.y1
         self.shape.x2 = self.x2
         self.shape.y2 = self.y2
+        self.shape.width = self.width
+        self.shape.color = self.color
 
 
 class Triangle(Shape):
@@ -1232,6 +1272,7 @@ class Triangle(Shape):
         self.shape.y2 = self.y2
         self.shape.x3 = self.x3
         self.shape.y3 = self.y3
+        self.shape.color = self.color
 
 
 class Star(Shape):
@@ -1252,9 +1293,13 @@ class Star(Shape):
         self.color = color
 
     def update(self):
+        self.shape.x = self.x
+        self.shape.y = self.y
         self.shape.outer_radius = self.outer
         self.shape.inner_radius = self.inner
         self.shape.num_spikes = self.spikes
+        self.shape.rotation = self.rotation
+        self.shape.color = self.color
 
 
 class Polygon(Shape):
@@ -1270,8 +1315,6 @@ class Polygon(Shape):
     def update(self):
         self.shape.coordinates = self.coordinates
         self.shape.color = self.color
-        self.shape.x = self.x
-        self.shape.y = self.y
 
 
 class Arc(Shape):
@@ -1292,6 +1335,8 @@ class Arc(Shape):
         self.color = color
     
     def update(self):
+        self.shape.x = self.x
+        self.shape.y = self.y
         self.shape.radius = self.radius
         self.shape.segments = self.segments
         self.shape.angle = self.rotation
@@ -1312,11 +1357,16 @@ class MyWindow(Window):
         self.set_icon(load(blank1), load(blank2))
 
         self.label = Label(
-            "Label",
+            "<b>Bold</b, <i>italic</i>, and <u>underline</u> text.",
             10,
             60,
             multiline=True,
             width=500)
+        
+        self._label = Label(
+            None,
+            10,
+            80)
 
         self.button = Button(
             "Click me!",
@@ -1342,9 +1392,11 @@ class MyWindow(Window):
             100, 
             150,
             50,
+            segments=5,
             color=BLUE_YONDER)
         
         self.container.append(self.label)
+        self.container.append(self._label)
         self.container.append(self.button)
         self.container.append(self.toggle)
         self.container.append(self.slider)
@@ -1356,17 +1408,16 @@ class MyWindow(Window):
         self.background_color = WHITE
 
     def click(self):
-        print(self.entry.get())
+        self._label.text = self.entry.get()
 
     def on_draw(self):
         self.clear()
-        
         self.container.draw()
 
         if self.toggle.value:
             self.label.text = f"{int(get_fps())} fps"
         else:
-            self.label.text = "Label"
+            self.label.text = "<b>Bold</b>, <i>italic</i>, and <u>underline</u> text in HTML"
 
         self.slider.text = str(self.slider.value)
 
