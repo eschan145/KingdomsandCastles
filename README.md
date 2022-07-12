@@ -394,7 +394,6 @@ The `draw` function is only supposed to hold drawing commands, not defining vari
 
 This wouold be used fpr a color picker. The name of the event is the first parameter, and then its parameters follow. You can have any number of parameters. Then, in a subclass of a widget, the event using `push_handlers()`. For more information about events, go to the [pyglet event documentation](https://pyglet.readthedocs.io/en/latest/programming_guide/events.html). I highly reccomend the pyglet website for extra help and information.
 
-```
 class ColorPicker2(ColorPicker):
     
     def __init__(self):
@@ -407,6 +406,16 @@ class ColorPicker2(ColorPicker):
 ```
 
 After you ware done with the events, use `remove_handlers()`. You can remove specific events as parameters.
+
+If you are going to render pyglet stuff, it is easy to implement. You just need to enable arcade's context pyglet renderer.
+
+```
+if self.window.ctx.pyglet_rendering():
+    pyglet_thing.draw()
+```
+
+Many widgets are made using pyglet drawing, like shapes and `Entry` widgets. The `Entry` widget uses a `pyglet.text.IncrementalTextLayout`, and a `pyglet.text.Caret` is drawn on top of it.
+
 ### Contact the maintainer
 esamuelchan@gmail.com
 
