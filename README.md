@@ -91,7 +91,7 @@ List of widget events:
 |`on_drag`|`x`, `y`, `dx`, `dy`, `buttons`, `modifiers`|the widget is dragged (only for sliders)|
 |`on_scroll`|`x`, `y`, `mouse`, `direction`|the widget is scrolled (only for sliders)|
 |`on_focus`||the widget has focus|
-|`on_text_select`|`motion`|the widget has text selected (only for entry widgets)|
+|`on_text_select`|`motion`|the widget has text selected (only for `Entry` widgets)|
 |`draw`||draw the widget|
 |`update`||update the widget|
 
@@ -388,8 +388,25 @@ If you are going to create any public functions, create them right after the `__
             return
 ```
 
-The `draw` function is only supposed to hold drawing commands, not defining variables, checking widget states, or stuff like that. Those are to be done in the `update` function. You must set the widget's component during the draw function. Also, set `self.activated` to True at the end. Make sure you check if the widget is activated or not disabled before every event. If those are true, then return and stop the function.
+The `draw` function is only supposed to hold drawing commands, not defining variables, checking widget states, or stuff like that. Those are to be done in the `update` function. You must set the widget's component during the draw function. Also, set `self.activated` to True at the end. Make sure you check if the widget is activated or not disabled before every event. If those are true, then return and stop the function. If you want to register events, then you can do something like this.
 
+`self.dispatch_event("on_color_pick", color)`
+
+This wouold be used fpr a color picker. The name of the event is the first parameter, and then its parameters follow. You can have any number of parameters. Then, in a subclass of a widget, the event using `push_handlers()`. For more information about events, go to the [pyglet event documentation](https://pyglet.readthedocs.io/en/latest/programming_guide/events.html). I highly reccomend the pyglet website for extra help and information.
+
+```
+class ColorPicker2(ColorPicker):
+    
+    def __init__(self):
+        ColorPicker.__init__(self)
+        
+        self.push_handlers(self.on_color_pick)
+       
+    def on_color_pick(self, color):
+        """A color is picked"""
+```
+
+After you ware done with the events, use `remove_handlers()`. You can remove specific events as parameters.
 ### Contact the maintainer
 esamuelchan@gmail.com
 
