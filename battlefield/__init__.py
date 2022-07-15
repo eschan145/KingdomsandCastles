@@ -9,12 +9,13 @@ parent = os.path.dirname(current)
   
 sys.path.append(parent)
 
-from color import WHITE
+from color import GRASS
 from constants import *
 from key import Q, W
-from widgets import Container, Frame, Label
+from widgets import Container, Frame, Label, create_image
 
 from units import Unit
+from physics import Physics
 
 
 class Battlefield(Window):
@@ -25,8 +26,10 @@ class Battlefield(Window):
         self.player_list = SpriteList()
         self.enemy_list = SpriteList()
         self.projectile_list = SpriteList()
+        self.dead_list = SpriteList()
 
         self.units = []
+        self.images = []
         
         self.player_unit = Unit(player_formation, PLAYER, self.width / 2, 200)
         self.enemy_unit = Unit(enemy_formation, ENEMY, self.width / 2, 500)
@@ -49,7 +52,13 @@ class Battlefield(Window):
 
         self.unit_organize_volley.bind(Q)
 
-        self.background_color = WHITE
+        self.physics = Physics(damping=0.7)
+
+        self.physics.add_sprite_list(self.player_list, body_type=self.physics.KINEMATIC)
+        self.physics.add_sprite_list(self.enemy_list, body_type=self.physics.KINEMATIC)
+        self.physics.add_sprite_list(self.projectile_list, damping=0.1, body_type=self.physics.KINEMATIC)
+
+        self.background_color = GRASS
 
     def command(self, attack):
         if attack == "volley":
@@ -57,10 +66,14 @@ class Battlefield(Window):
 
     def on_draw(self):
         self.clear()
+        
+        for image in self.images:
+            create_image(*image)
 
         self.player_list.draw()
         self.enemy_list.draw()
         self.projectile_list.draw()
+        self.dead_list.draw()
 
         self.fps.text = f"{int(get_fps())} fps"
         
@@ -68,15 +81,18 @@ class Battlefield(Window):
 
         for unit in self.units:
             unit.draw()
-    
+        
     def on_key_press(self, keys, modifiers):
         if keys == W:
             self.current_unit.on_split()
 
-    def on_update(self, delta_time):
+    def on_update(self, delta):
         self.player_list.update()
         self.enemy_list.update()
         self.projectile_list.update()
+
+        self.physics.step()
+        self.physics.resync_sprites()
 
 
 if __name__ == "__main__":
