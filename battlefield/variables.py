@@ -1,7 +1,11 @@
-"""Contains variables used throughout the battlefield (pun not intended)"""
+"""Contains variables used throughout the battlefield (Pun not intended)"""
+from random import choice, randint
 
 import os
 import sys
+
+from arcade import load_texture
+from math import atan2, cos, sin
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -11,7 +15,6 @@ sys.path.append(parent)
 from constants import *
 from file import soldier, projectile
 from geometry import Point, chance, check_collision, get_closest
-from random import choice, randint
 from sprite import Object
 
 
@@ -37,7 +40,7 @@ class Arrow(Object):
         self.target = target
 
         self.accuracy = 0
-        self.speed = 0.5
+        self.speed = 1
 
         self.shooter.arrows -= 1
         
@@ -52,12 +55,54 @@ class Arrow(Object):
         
         self.point = Point(self.target.x + self.accuracy_x,
                            self.target.y + self.accuracy_y)
-        self.destination_point = self.point.x, self.point.y
+        
+        dest_x = self.point.x
+        dest_y = self.point.y
+
+        x_diff = dest_x - self.shooter.x
+        y_diff = dest_y - self.shooter.x
+        angle = atan2(y_diff, x_diff)
+
+        force = [cos(angle), sin(angle)]
+        size = max(self.shooter.width, self.shooter.height) / 2
+
+        self.center_x += size * force[0]
+        self.center_y += size * force[1]
 
         self.window.projectile_list.append(self)
+        self.window.physics.add_sprite(
+                                       self,
+                                       mass=0.1,
+                                       damping=1,
+                                       friction=0.6,
+                                       collision_type="bullet",
+                                       elasticity=0
+        )
 
-    def remove(self):
-        self.remove_from_sprite_lists()
+        # Taking into account the angle, calculate our force.
+        force[0] *= -ARROW_MOVE_FORCE
+        force[1] *= -ARROW_MOVE_FORCE
+        
+        self.window.physics.apply_force(self, force)
+
+        def arrow_soldier_handler(sprite_a, sprite_b, arbiter, space, data):
+            soldier = self.window.physics.get_sprite_for_shape(arbiter[0])
+
+            if self.shooter.allegiance == PLAYER and \
+                isinstance(soldier, Soldier) and \
+                soldier.allegiance == ENEMY:
+                soldier.health -= self.speed * ARROW_DAMAGE
+                if soldier.health:
+                    self.window.images.append(
+                        (
+                            self.x, self.y,
+                            projectile["arrow"], 0.7,
+                            self.angle,
+                        )
+                    )
+                    self.remove()
+
+        self.window.physics.add_collision_handler("arrow", "soldier", post_handler=arrow_soldier_handler)
 
     def update(self):
         Object.update(self)
@@ -66,20 +111,36 @@ class Arrow(Object):
             self.speed += ARROW_ACCELERATION
         else:
             self.speed -= ARROW_ACCELERATION
-
-        self.follow(self.point, rate=0, speed=self.speed)
-
-        for object in check_collision(self, self.window.player_list):
-            if self.shooter.allegiance == ENEMY and \
-                isinstance(object, Soldier):
-                object.health -= self.speed * ARROW_DAMAGE
-                self.remove()
         
-        for object in check_collision(self, self.window.enemy_list):
-            if self.shooter.allegiance == PLAYER and \
-                isinstance(object, Soldier):
-                object.health -= self.speed * ARROW_DAMAGE
-                self.remove()
+        # for object in check_collision(self, self.window.player_list):
+        #     if self.shooter.allegiance == ENEMY and \
+        #         isinstance(object, Soldier):
+        #         object.health -= self.speed * ARROW_DAMAGE
+        #         object.knockback(ARROW_KNOCKBACK)
+        #         if object.health:
+        #             self.window.images.append(
+        #                 (
+        #                     self.x, self.y,
+        #                     projectile["arrow"], 0.7,
+        #                     self.angle,
+        #                 )
+        #             )
+        #             self.remove()
+        
+        # for object in check_collision(self, self.window.enemy_list):
+        #     if self.shooter.allegiance == PLAYER and \
+        #         isinstance(object, Soldier):
+        #         object.health -= self.speed * ARROW_DAMAGE
+        #         object.knockback(ARROW_KNOCKBACK)
+        #         if object.health:
+        #             self.window.images.append(
+        #                 (
+        #                     self.x, self.y,
+        #                     projectile["arrow"], 0.7,
+        #                     self.angle,
+        #                 )
+        #             )
+        #             self.remove()
         
         if self.bottom > self.window.height or \
             self.top < 0 or \
@@ -128,6 +189,17 @@ class Soldier(Object):
     
         self.weapon = RANGE
 
+        if self.allegiance == PLAYER:
+            self.append_texture(load_texture(soldier["player_light_infantry_dead"]))
+        else:
+            self.append_texture(load_texture(soldier["enemy_light_infantry_dead"]))
+
+    def knockback(self, strength):
+        self.reverse(strength)
+
+        self.x += self.change_x
+        self.y += self.change_y
+
     def on_attack(self):
         distance = get_closest(self, self.rivals)
         
@@ -149,7 +221,13 @@ class Soldier(Object):
 
     def update(self):
         if self.health <= 0:
-            self.remove_from_sprite_lists()
+            self.set_texture(1)
+            self.health = 0
+
+            self.remove()
+            self.window.dead_list.append(self)
+
+            return
 
         if chance(1000):
             self.health += 1
@@ -157,12 +235,3 @@ class Soldier(Object):
         if self.target:
             if get_closest(self, self.rivals)[1] < MELEE_RANGE:
                 self.follow(self.target, rate=5, speed=1.5)
-
-        for enemy in self.rivals:
-            if enemy.health > 0: # Enemy still alive
-                rate = 15000
-                if self.archer: rate = 10000
-                
-                if len(self.window.projectile_list) < 20:
-                    if chance(rate):
-                        self.on_attack()
