@@ -1,6 +1,6 @@
 from arcade import draw_rectangle_outline, get_window
 from pyglet.event import EventDispatcher
-from random import choice
+from random import choice, random
 
 import os
 import sys # Use full imports: may have three path variables
@@ -74,7 +74,7 @@ class Unit(EventDispatcher):
 
         self.window.push_handlers(self)
         self.window.units.append(self)
-    
+
     def on_volley(self):
         for soldier in self.soldiers:
             if soldier.health > 0 and soldier.archer and soldier.arrows:
@@ -104,12 +104,26 @@ class Unit(EventDispatcher):
             if self.allegiance == PLAYER:
                 self.window.current_unit = self
     
-    def on_update(self, delta_time):
+    def on_update(self, delta):
+        for soldier in self.soldiers:
+            if not soldier.health:
+                self.soldiers.remove(soldier)
+
+        fire = False
+
+        for enemy in self.rivals:
+            if enemy.health > 0: # Enemy still alive
+                fire = True
+                break
+
+        if fire and self.soldiers:
+            soldier = choice(self.soldiers)
+            if soldier.archer: rate = 2000 / len(self.soldiers)
+            if soldier.light_infantry: rate = 3000 / len(self.soldiers)
+
+            if len(self.window.projectile_list) < 50: # Fewer than twenty arrows
+                if random() < 1 / rate:     #
+                    soldier.on_attack() # Fire
+
         if not self.window.current_unit == self:
             return
-
-        for soldier in self.soldiers:
-            if self.keys[KEY_UP]: soldier.y += 1
-            elif self.keys[KEY_DOWN]: soldier.y -= 1
-            if self.keys[KEY_RIGHT]: soldier.x += 1
-            elif self.keys[KEY_LEFT]: soldier.x -= 1
