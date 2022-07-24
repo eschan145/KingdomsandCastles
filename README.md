@@ -27,7 +27,11 @@ Commands help you lead your army and attack.
 |Move right|<kbd>→</kbd>|move your army right|
 
 ### Installation
-To install this, you must download the Python `arcade` library.
+Requirements:
+- Python 3.5 or higher
+- Python [`arcade`](https://api.arcade.academy/) library.
+
+To install this, you must download the Python [`arcade`](https://api.arcade.academy/) library.
 1. Open up the Command Prompt (Type "cmd" in the search bar and press <kbd>Enter</kbd>
 2. Type in `py -m pip install arcade --user` or `python -m pip install arcade --user`
 3. Press <kbd>Enter</kbd>
@@ -79,6 +83,8 @@ Source code: https://github.com/eschan145/Armies/blob/main/widgets.py
 The GUI interface is completely created by Ethan Chan. It includes several different types of interactive widgets, and more are to be added. API is provided to create your own widgets, which can subclass the `Widget` base class. All events are supported. All states can be accessed with `.hover`, `.press`, and `.disable` properties. Many widgets have components, which are basically other widgets added within it. For example, the toggle widget has three components: label (for the text), image (for the bar), and image (for the knob). Its main component is the bar, which takes the hover event and hitbox. I worked really hard on the docs and code so please enjoy it.
 
 To start a GUI interface, use the `Container` class. Initialize this once in your `__init__` function. To start adding widgets, create widgets with their parameters and properties. Add them to the container. In the `on_draw` function, call the container's `draw` function. To end the container and terminate its events, call its `exit` function. If you want to draw each of the widgets's hitboxes, call its `draw_bbox(width, padding)`. Calling `destroy()` on a widget disconnects it from the event framework and removes it from the container. `check_collision(x, y)` sees if the `x` and `y` point is colliding with the widget. If that fails, use `_check_collision(x, y)`.
+
+Currently, the GUI toolkit is being upgraded to support more features, like sizing of Buttons and more customization options. The shapes are also going to be upgraded. This upgrade is scheduled to be finished by the end of August 2022.
 
 List of widget events:
 |Event|Parameters|Details|
@@ -365,7 +371,7 @@ class MyWidget(Widget):
         self.activated = False
 ```
 
-Let's look at the above code. In line 1—3 we set up the actual subclassing of the widget class. In line 4, we create our component for the widget. Note that not all widgets need to have components, just they are required for more complex widgets. We then initialize the parent `Widget` class by calling its `__init__` function. A widget starting off takes several parameters: image (if none provided a blank one is used), scale (scaling of widget), and frame, which can be specified in the widget's parameters if you want to use it. On line 11 we create an `activated` property, which is required for a widget or a `ValueError` will be raised when calculating its hitbox.
+Let's look at the above code. In line 1—3 we set up the actual subclassing of the widget class. In line 4, we create our component for the widget. Note that not all widgets need to have components, just they are required for more complex widgets. Some widgest will have multiple components, like a dropdown, which would have several labels, an entry,and a button. Labels do not have a single complnent. We then initialize the parent `Widget` class by calling its `__init__` function. A widget starting off takes several parameters: image (if none provided a blank one is used), scale (scaling of widget), and frame, which can be specified in the widget's parameters if you want to use it. On line 11 we create an `activated` property, which is required for a widget or a `ValueError` will be raised when calculating its hitbox.
 
 ```
     def func(self):
@@ -421,13 +427,3 @@ Many widgets are made using pyglet drawing, like shapes and `Entry` widgets. The
 esamuelchan@gmail.com
 
 This game is still heavily in development. If you encounter any issues, please post them in the Issues page. It was created using the Arcade library (https://api.arcade.academy/), which is based off on pyglet. This game was inspired by Masendor (https://github.com/remance/Masendor).
-
-### TODO
-- [x] Display armies
-- [x] Have soldiers decide between melee and range attacks
-- [x] Give soldiers basic properties (health, strength)
-- [x] Soldiers take damage when hit
-- [ ] Multiplayer
-- [ ] Command soldiers
-- [ ] Debug `Entry` glitches
-- [ ] Complete documentation
