@@ -28,8 +28,8 @@ Commands help you lead your army and attack.
 
 ### Installation
 Requirements:
-- Python 3.5 or higher
-- Python [`arcade`](https://api.arcade.academy/) library.
+- Python 3.5 or higher. At the time of writing, the latest version is 3.10.5, which can be found at the [Python website](https://www.python.org/downloads/)
+- Python [`arcade`](https://api.arcade.academy/) library
 
 To install this, you must download the Python [`arcade`](https://api.arcade.academy/) library.
 1. Open up the Command Prompt (Type "cmd" in the search bar and press <kbd>Enter</kbd>
