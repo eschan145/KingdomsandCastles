@@ -1011,8 +1011,25 @@ BACKGROUND_COLOR = ORANGE
 
 from typing import Tuple
 
+__all__ = [
+           "clamp",
+           "four_byte",
+           "convert_to_hex",
+           "convert_to_rgb",
+           "change_format",
+           "scale_color"
+          ]
 
 def clamp(x, minimum=0, maximum=255):
+    """Clamp a value.
+    
+    minimum - minimum value for clamp
+    maximum - maximum value for clamp
+    
+    parameters: int, int
+    returns: int
+    """
+
     if x < minimum:
         return minimum
     if x > maximum:
@@ -1020,16 +1037,52 @@ def clamp(x, minimum=0, maximum=255):
     return int(x)
 
 def four_byte(color, alpha=255):
+    """Convert a three-byte color into a four-byte color (RGBA).
+    
+    color - three-byte color to convert
+    alpha - opacity of converted four-byte color
+    
+    parameters: tuple (RGB), int
+    returns: tuple (RGBA)
+    """
+
     return color[0], color[1], color[2], alpha
 
 def convert_to_hex(rgb):
+    """Convert a RGB color to a hexadecimal color.
+    
+    rgb - three-byte RGB color to be converted to hexadecimal
+    
+    parameters: tuple (RGB)
+    returns: str (hexadecimal)
+    """
+
     return '%02x%02x%02x' % rgb
 
 def convert_to_rgb(hex):
+    """Convert a hexadecimal color to a RGB color.
+    
+    hex - hexadecimal color to be converted to RGB
+    
+    parameters: str (hex)
+    returns: tuple (RGB)
+    """
+
     hex.lstrip("#")
     return tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
 
 def change_format(color):
+    """Convert a color to the opposite format. The color is guessed from
+    whether or not the color is a tuple. This just calls convert_to_hex or
+    convert_to_rgb. It is recommended to use this function, but there are
+    cases where you might need to use the others.
+    
+    color - color to be converted to the opposite format
+    
+    parameters: tuple (RGB) or str (hex)
+    returns: tuple (RGB) or str (hex)
+    """
+
     if isinstance(color, Tuple):
         return convert_to_hex(color)
     else:
@@ -1037,8 +1090,17 @@ def change_format(color):
 
 def scale_color(color, factor):
     """Scale color brightness by factor.
-    If factor is less than 1, the color is darkened.
-    If factor is greater than 1, the color is brightened.
+        - If factor is less than 1, the color is darkened.
+        - If factor is greater than 1, the color is brightened.
+    Only RGB is supported currently.
+
+    color - color to be scaled in brightness
+    factor - see above section
+
+    parameters: tuple (RGB)
+    returns: tuple (RGB)
+    
+    TODO: add support accepting hexadecimal as a parameter.
     """
 
     color = convert_to_hex(color)
