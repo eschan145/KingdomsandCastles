@@ -3,34 +3,129 @@ from pyglet.event import EventDispatcher
 
 from geometry import Point
 
+__all__ = [
+           "Keys",
+           "Mouse",
+           "modifiers_string",
+           "key_string",
+           "motion_string",
+           "user_key",
+           "_key_names",
+           "_motion_names",
+           "_name",
+           "_value"
+          ]
+
+
 class Keys(EventDispatcher):
+    """Key state handler inspired by pyglet.window.key.KeyStateHandler."""
 
     def __init__(self):
+        """Initialize key state handler.
+
+        When creating a key state handler, it will push events automatically.
+        
+        >>> keys = Keys()
+        >>> # Press and hold down the "right" key...
+        >>> keys[RIGHT]
+        True
+        >>> keys[LEFT]
+        False
+
+        This is quite useful when seeing if a key is being held down.
+        
+        properties:
+            data - internal map of key state handler used to track keys
+            window - current window to push events to
+        
+        methods:
+            on_key_press(self, keys, modifiers)
+                Called as an event when a key is pressed.
+            on_key_release(self, keys, modifiers)
+                Called as an event when a key is released.
+        """
+
         self.data = {}
-        self.active = True
 
         self.window = get_window()
         
+        # Push event handlers to the window
         self.window.push_handlers(
             self.on_key_press,
             self.on_key_release
-            )
+        )
 
     def on_key_press(self, keys, modifiers):
-        if self.active:            
-            self.data[keys] = True
+        """Called as an event when a key is pressed. This is used to update the
+        key state handler.
+        
+        keys - key pressed
+        modifiers - modifiers pressed (use bit-wise operations)
+        """
+
+        self.data[keys] = True
 
     def on_key_release(self, keys, modifiers):
-        if self.active:
-            self.data[keys] = False
+        """Called as an eventwhen a key is released. This is used to update the 
+        key state handler.
+        
+        keys - key released
+        modifiers - modifiers released (use bit-wise operations)
+        """
+
+        self.data[keys] = False
 
     def __getitem__(self, key):
+        """Get an item from data with key.
+        
+        key - key to get item from
+        
+        parameters: int
+        returns: int
+        """
+
         return self.data.get(key, False)
 
 
 class Mouse(EventDispatcher):
+    """Mouse state handler."""
 
     def __init__(self):
+        """Initialize mouse state handler.
+        
+        Like a key state handler, a mouse state handler will push events
+        automatically.
+        
+        >>> mouse = Mouse()
+        >>> # Press and hold down the left mouse button...
+        >>> mouse[MOUSE_BUTTON_LEFT]
+        True
+        >>> mouse[MOUSE_BUTTON_RIGHT]
+        False
+
+        This is quite useful when seeing if a mouse button is being held down.
+        
+        properties:
+            x - x coordinate of mouse
+            y - y coordinate of mouse
+            press - bool whether or not the mouse is currently pressed
+            window - current window to push events to
+        
+        methods:
+            on_mouse_press(x, y, buttons, modifiers)
+                Called when the mouse is pressed.
+            on_mouse_release(x, y, buttons, modifiers)
+                Called when the mouse is released.
+            on_mouse_motion(x, y, dx, dy)
+                Called when the mouse is moved.
+            on_mouse_drag(x, y, dx, dy, buttons, modifiers)
+                Called when the mouse is dragged.
+            on_update(delta)
+                Called every tick of the update cycle
+        
+        TODO: add specifying button functionality
+        """
+        
         self.x = 0
         self.y = 0
 
@@ -46,28 +141,81 @@ class Mouse(EventDispatcher):
             self.on_mouse_release,
             self.on_mouse_drag,
             self.on_update
-            )
+        )
 
-    def on_mouse_press(self, x, y, button, modifiers):
+    def on_mouse_press(self, x, y, buttons, modifiers):
+        """Called when the mouse is pressed.
+        
+        x - x coordinate of mouse press
+        y - y coordinate of mouse press
+        buttons - buttons pressed by mouse
+        modifiers - modifiers being held down during mouse press
+        
+        parameters: int, int, int, int
+        """
+
         self.press = True
 
-    def on_mouse_release(self, x, y, button, modifiers):
+    def on_mouse_release(self, x, y, buttons, modifiers):
+        """Called when the mouse is released.
+        
+        x - x coordinate of mouse release
+        y - y coordinate of mouse release
+        buttons - buttons released by mouse
+        modifiers - modifiers being held down during mouse release
+        
+        parameters: int, int, int, int
+        """
+
         self.press = False
 
     def on_mouse_motion(self, x, y, dx, dy):
+        """Called when the mouse is moved.
+        
+        x - x coordinate of mouse
+        y - y coordinate of mouse
+        dx - difference in x coordinates from last position
+        dy - difference in y coordinates from last position
+        
+        parameters: int, int, int, int
+        """
+
         self.x = x
         self.y = y
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        """Called when the mouse is dragged.
+
+        x - x coordinate of mouse drag
+        y - y coordinate of mouse drag
+        dx - difference in x coordinates from last position
+        dy - difference in y coordinates from last position
+        buttons - buttons being held down during mouse drag
+        modifiers - modifiers being held down during mouse drag
+        
+        parameters: int, int, int, int, int, int
+        """
+
         self.x = x
         self.y = y
 
-    def on_update(self, delta_time):
+    def on_update(self, delta):
+        """Called every tick of the update cycle.
+        
+        delta - time since the last update was called
+        
+        parameters: int
+        """
+
         self.point.x = self.x
         self.point.y = self.y
 
 
 # Predefines keyboard constants
+
+# These constants allow you to use the keyboard and mouse constants without
+# defining your own. There are also functions to find your own keyboard
+# constants, which can be put into variables for simplicity.
 
 # Mouse buttons
 MOUSE_BUTTON_LEFT = 1
@@ -283,3 +431,99 @@ BRACELEFT = 123
 BAR = 124
 BRACERIGHT = 125
 ASCIITILDE = 126
+
+_key_names = {}
+_motion_names = {}
+
+for _name, _value in locals().copy().items():
+    if _name[:2] != '__' and _name.upper() == _name and \
+        not _name.startswith('SHIFT') and \
+        not _name.startswith("CONTROL") and \
+        not _name.startswith("ALT") and \
+        not _name.startswith("CAPSLOCK") and \
+        not _name.startswith("NUMLOCK") and \
+        not _name.startswith("SCROLLLOCK") and \
+        not _name.startswith("COMMAND") and \
+        not _name.startswith("OPTION"):
+        if _name.startswith('MOTION_'):
+            _motion_names[_value] = _name
+        else:
+            _key_names[_value] = _name
+
+def modifiers_string(modifiers):
+    """Return a string describing a set of modifiers.
+
+    >>> modifiers_string(SHIFT | CONTROL)
+    "SHIFT|CONTROL"
+
+    modifiers - bitwise combination of modifiers
+
+    returns: str
+    """
+
+    modifier_names = []
+
+    if modifiers & SHIFT:
+        modifier_names.append("SHIFT")
+    if modifiers & CONTROL:
+        modifier_names.append("CTRL")
+    if modifiers & ALT:
+        modifier_names.append("ALT")
+    if modifiers & CAPSLOCK:
+        modifier_names.append("CAPSLOCK")
+    if modifiers & NUMLOCK:
+        modifier_names.append("NUMLOCK")
+    if modifiers & SCROLLLOCK:
+        modifier_names.append("SCROLLLOCK")
+    if modifiers & COMMAND:
+        modifier_names.append("COMMAND")
+    if modifiers & OPTION:
+        modifier_names.append("OPTION")
+    
+    return '|'.join(modifier_names)
+
+def key_string(key):
+    """Return a string describing a key symbol.
+
+    >>> key_string(BACKSPACE)
+    "BACKSPACE"
+
+    key - key symbol
+
+    returns: str
+    """
+
+    if key < 1 << 32:
+        return _key_names.get(key, str(key))
+    else:
+        return 'user_key(%x)' % (key >> 32)
+
+
+def motion_string(motion):
+    """Return a string describing a text motion. These motions are called
+    with pyglet.text.layout.IncrementalTextLayouts.
+
+    >>> motion_string(MOTION_NEXT_WORD)
+    "MOTION_NEXT_WORD"
+
+    motion - text motion constant
+
+    returns: str
+    """
+
+    return _motion_names.get(motion, str(motion))
+
+
+def user_key(scancode):
+    """Return a key symbol for a key not supported.
+
+    This can be used to map virtual keys or scancodes from unsupported
+    keyboard layouts into a machine-specific symbol.  The symbol will
+    be meaningless on any other machine, or under a different keyboard layout.
+
+    Applications should use user-keys only when user explicitly binds them
+    (for example, mapping keys to actions in a game options screen).
+    """
+
+    assert scancode > 0
+    return scancode << 32
