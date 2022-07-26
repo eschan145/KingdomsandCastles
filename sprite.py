@@ -1,8 +1,11 @@
-from arcade import Sprite
+from arcade import Sprite, get_window
 from math import atan2, cos, degrees, pi, radians, sin
 from random import choice, randint, randrange, uniform
 
-from geometry import get_closest, get_distance
+from pyglet.event import EventDispatcher
+from pymunk import Body, Poly, Vec2d
+
+from geometry import get_angle_degrees
 from file import *
 from constants import *
 from color import *
@@ -15,7 +18,7 @@ from color import *
 
 class Object(Sprite):
     def __init__(self, image, scaling=1.0):
-        super().__init__(filename=image, scale=scaling)
+        Sprite.__init__(self, filename=image, scale=scaling)
 
         # Destination point is where we are going
         self._destination_point = None
@@ -26,6 +29,13 @@ class Object(Sprite):
         self.alive = True
         self.fading = False
         self.ranks = False
+
+        self.moved = False
+        self.move_angle = 0
+
+        self.frames = 0
+
+        self.window = get_window()
 
     def _get_x(self):
         return self._position[0]
@@ -55,6 +65,9 @@ class Object(Sprite):
 
     x = property(_get_x, _set_x)
     y = property(_get_y, _set_y)
+
+    def remove(self):
+        self.remove_from_sprite_lists()
     
     @property
     def destination_point(self):
@@ -64,9 +77,41 @@ class Object(Sprite):
     def destination_point(self, destination_point):
         self._destination_point = destination_point
     
+    def forward(self, speed):
+        self.change_x = cos(self.radians) * speed
+        self.change_y = sin(self.radians) * speed
+
+    def rotate_to_point(self, point):
+        angle = get_angle_degrees(self.x, self.y, point.x, point.y)
+
+        self.angle = -angle
+    
     def follow(self, object, rate=65, speed=2):
         self.x += self.change_x
         self.y += self.change_y
+
+        if not rate and not self.moved:
+            start_x = self.x
+            start_y = self.y
+
+            # Get the destination location for the bullet
+            dest_x = object.x
+            dest_y = object.y
+
+            # Do math to calculate how to get the bullet to the destination.
+            # Calculation the angle in radians between the start points
+            # and end points. This is the angle the bullet will travel.
+            x_diff = dest_x - start_x
+            y_diff = dest_y - start_y
+            self.move_angle = atan2(y_diff, x_diff)
+
+            self.moved = True
+
+        if not rate:
+            self.change_x = cos(self.move_angle) * speed
+            self.change_y = sin(self.move_angle) * speed
+
+            return
 
         # Random 1 in rate chance that we'll change from our old direction and
         # then re-aim toward the player
@@ -119,6 +164,8 @@ class Object(Sprite):
         
     def update(self):
         # Update the player
+        
+        self.frames += 1
 
         if self.fading:
             try:
@@ -192,96 +239,150 @@ class Object(Sprite):
         self.y += self.change_y
 
 
+class PhysicsObject(Sprite):
+
+    def __init__(self, image, scaling=1.0, mass=1):
+        Sprite.__init__(self, filename=image, scale=scaling)
+
+        self.body = Body()
+        self.shape = Poly(self.body, self.hit_box)
+
+        self.x = 0
+        self.y = 0
+
+        self.stopped = False
+
+        # Destination point is where we are going
+        self._destination_point = None
+
+        # Max speed we can rotate
+        self.rot_speed = 3
+
+        self.moved = False
+        self.move_angle = 0
+
+        self.frames = 0
+        self.window = get_window()
+
+        self.window.space.add(self.body, self.shape)
+
+    def _get_x(self):
+        return self._position[0]
+
+    def _set_x(self, new_value):
+        if new_value != self._position[0]:
+            self.clear_spatial_hashes()
+            self._point_list_cache = None
+            self._position = (new_value, self._position[1])
+            self.add_spatial_hashes()
+
+            for sprite_list in self.sprite_lists:
+                sprite_list.update_location(self)
+
+    def _get_y(self):
+        return self._position[1]
+
+    def _set_y(self, new_value):
+        if new_value != self._position[1]:
+            self.clear_spatial_hashes()
+            self._point_list_cache = None
+            self._position = (self._position[0], new_value)
+            self.add_spatial_hashes()
+
+            for sprite_list in self.sprite_lists:
+                sprite_list.update_location(self)
+
+    x = property(_get_x, _set_x)
+    y = property(_get_y, _set_y)
+
+    def remove(self):
+        self.remove_from_sprite_lists()
+    
+    @property
+    def destination_point(self):
+        return self._destination_point
+
+    @destination_point.setter
+    def destination_point(self, destination_point):
+        self._destination_point = destination_point
+    
+    def forward(self, speed):
+        self.change_x = cos(self.radians) * speed
+        self.change_y = sin(self.radians) * speed
+
+    def rotate_to_point(self, point):
+        angle = get_angle_degrees(self.x, self.y, point.x, point.y)
+
+        self.angle = -angle
+    
+    def follow(self, object, rate=65, speed=2):
+        self.x += self.change_x
+        self.y += self.change_y
+
+        if not rate and not self.moved:
+            start_x = self.x
+            start_y = self.y
+
+            # Get the destination location for the bullet
+            dest_x = object.x
+            dest_y = object.y
+
+            # Do math to calculate how to get the bullet to the destination.
+            # Calculation the angle in radians between the start points
+            # and end points. This is the angle the bullet will travel.
+            x_diff = dest_x - start_x
+            y_diff = dest_y - start_y
+            self.move_angle = atan2(y_diff, x_diff)
+
+            self.moved = True
+
+        if not rate:
+            self.change_x = cos(self.move_angle) * speed
+            self.change_y = sin(self.move_angle) * speed
+
+            return
+
+        # Random 1 in rate chance that we'll change from our old direction and
+        # then re-aim toward the player
+        if not randrange(rate):
+            start_x = self.x
+            start_y = self.y
+
+            # Get the destination location for the bullet
+            dest_x = object.x
+            dest_y = object.y
+
+            # Do math to calculate how to get the bullet to the destination.
+            # Calculation the angle in radians between the start points
+            # and end points. This is the angle the bullet will travel.
+            x_diff = dest_x - start_x
+            y_diff = dest_y - start_y
+            angle = atan2(y_diff, x_diff)
+
+            # Taking into account the angle, calculate our change_x
+            # and change_y. Velocity is how fast the bullet travels.
+            self.change_x = cos(angle) * speed
+            self.change_y = sin(angle) * speed
+    
+    def update(self):
+        self.body.position = self.x, self.y
+        self.shape.position = self.x, self.y
+        
+        if self.stopped:
+            self.force = 0
+            self.body.force = (0, 0)
+            self.stop()
+            
+            return
+        self.body.force = self.force
+        self.body.angle = self.angle
+        self.shape.angle = self.angle
+       
+
 class Point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-
-
-class Arrow(Object):
-    
-    def __init__(self, shooter, target):
-
-        """Initiate arrows.
-        
-        Arrows start with a speed of zero, then speed up as they make their way to
-        their target. They evantually slow down as a result of drag.
-        
-        """
-
-        Object.__init__(self, projectile["arrow"])
-
-        self.shooter = shooter
-        self.target = target
-
-        self.accuracy = 0 # TODO: add misses
-        self.speed = 0
-
-        self.point = Point(self.target.x, self.target.y)
-    
-    def update(self):
-        if self.speed < ARROW_MAXIMUM_SPEED:
-            self.speed += ARROW_ACCELERATION
-        else:
-            self.speed -= ARROW_ACCELERATION
-        self.follow(self.point, speed=self.speed)
-
-        
-class Soldier(Object):
-
-    def __init__(self, allegiance, rivals,
-                 light_infantry=False, heavy_infantry=False, archer=False):
-
-        """Initiate soldiers.
-        
-        Soldiers have allegiance to either the player or the enemy. A rivals
-        parameter specifies its enemy side, referenced in a SpriteList.
-
-        They can be of multiple types:
-            * Light infantry        - Ordinary foot soldiers
-            * Heavy infantry        - Heavily armored but slower foot soldiers
-            * Archer                - Soldiers that can fire arrows at enemy
-        """
-
-        if allegiance == PLAYER:
-            image = soldier["player_light_infantry"]
-
-        Object.__init__(self, image)
-
-        self.allegiance = allegiance
-        self.rivals = rivals
-
-        self.light_infantry = light_infantry
-        self.heavy_infantry = heavy_infantry
-        self.archer = archer
-
-        self.health = 100
-        self.arrows = 24
-        self.strength = 10
-    
-        self.weapon = RANGE
-
-    def on_attack(self):
-        distance = get_closest(self, self.rivals)
-
-        if distance[1] < randint(MELEE_RANGE - MELEE_RANGE_CHANCE,
-                              MELEE_RANGE + MELEE_RANGE_CHANCE):
-            self.weapon = MELEE
-
-            # TODO: have soldier inflict damage
-        
-        else:
-            self.weapon = RANGE
-
-            arrow = Arrow(PLAYER, self, distance[0])
-            self.fire_projectile(arrow)
-            
-    def update(self):
-        for enemy in self.rivals:
-            if enemy.health > 0: # Enemy dead
-                self.on_attack() # TODO: add interval of attack
-                
-                break
 
 
 class Explosion(Object):
