@@ -1,3 +1,5 @@
+"""Define some colors for Armies"""
+
 AERO_BLUE = (201, 255, 229)
 AFRICAN_VIOLET = (178, 132, 190)
 AIR_FORCE_BLUE = (93, 138, 168)
@@ -398,6 +400,7 @@ GOLDEN_YELLOW = (255, 223, 0)
 GOLDENROD = (218, 165, 32)
 GRANNY_SMITH_APPLE = (168, 228, 160)
 GRAPE = (111, 45, 168)
+GRASS = (172, 184, 127)
 GRAY = (128, 128, 128)
 GRAY_ASPARAGUS = (70, 89, 69)
 GRAY_BLUE = (140, 146, 172)
@@ -1002,7 +1005,52 @@ YELLOW_ROSE = (255, 240, 0)
 ZAFFRE = (0, 20, 168)
 ZINNWALDITE_BROWN = (44, 22, 8)
 
+_BLACK = (2, 2, 2)
+
 BACKGROUND_COLOR = ORANGE
+
+from typing import Tuple
+
+
+def clamp(x, minimum=0, maximum=255):
+    if x < minimum:
+        return minimum
+    if x > maximum:
+        return maximum
+    return int(x)
 
 def four_byte(color, alpha=255):
     return color[0], color[1], color[2], alpha
+
+def convert_to_hex(rgb):
+    return '%02x%02x%02x' % rgb
+
+def convert_to_rgb(hex):
+    hex.lstrip("#")
+    return tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
+
+def change_format(color):
+    if isinstance(color, Tuple):
+        return convert_to_hex(color)
+    else:
+        return convert_to_rgb(color)
+
+def scale_color(color, factor):
+    """Scale color brightness by factor.
+    If factor is less than 1, the color is darkened.
+    If factor is greater than 1, the color is brightened.
+    """
+
+    color = convert_to_hex(color)
+    color = color.strip('#')
+
+    if factor < 0 or len(color) != 6:
+        return color
+
+    r, g, b = int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16)
+
+    r = clamp(r * factor)
+    g = clamp(g * factor)
+    b = clamp(b * factor)
+
+    return r, g, b
