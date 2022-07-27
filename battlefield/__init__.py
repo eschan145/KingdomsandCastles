@@ -4,6 +4,8 @@ from arcade import get_fps, run
 import os
 import sys
 
+from pymunk import Space
+
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
   
@@ -15,7 +17,6 @@ from key import Q, W
 from widgets import Container, Frame, Label, create_image
 
 from units import Unit
-from physics import Physics
 
 
 class Battlefield(Window):
@@ -30,6 +31,8 @@ class Battlefield(Window):
 
         self.units = []
         self.images = []
+
+        self.space = Space()
         
         self.player_unit = Unit(player_formation, PLAYER, self.width / 2, 200)
         self.enemy_unit = Unit(enemy_formation, ENEMY, self.width / 2, 500)
@@ -51,12 +54,6 @@ class Battlefield(Window):
         self.container.append(self.unit_organize_volley)
 
         self.unit_organize_volley.bind(Q)
-
-        self.physics = Physics(damping=0.7)
-
-        self.physics.add_sprite_list(self.player_list, body_type=self.physics.KINEMATIC)
-        self.physics.add_sprite_list(self.enemy_list, body_type=self.physics.KINEMATIC)
-        self.physics.add_sprite_list(self.projectile_list, damping=0.1, body_type=self.physics.KINEMATIC)
 
         self.background_color = GRASS
 
@@ -91,8 +88,7 @@ class Battlefield(Window):
         self.enemy_list.update()
         self.projectile_list.update()
 
-        self.physics.step()
-        self.physics.resync_sprites()
+        self.space.step(1 / 60.0)
 
 
 if __name__ == "__main__":
