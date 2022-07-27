@@ -1,4 +1,5 @@
 """Contains variables used throughout the battlefield (Pun not intended)"""
+
 from random import choice, randint
 
 import os
@@ -6,7 +7,7 @@ import sys
 
 from arcade import load_texture
 from math import atan2, cos, sin
-from pymunk import CollisionHandler, ShapeFilter
+from pymunk import ShapeFilter
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -146,21 +147,6 @@ class Arrow(PhysicsObject):
                     )
                     self.remove()
         
-        # for object in check_collision(self, self.window.enemy_list):
-        #     if self.shooter.allegiance == PLAYER and \
-        #         isinstance(object, Soldier):
-        #         object.health -= self.speed * ARROW_DAMAGE
-        #         object.knockback(ARROW_KNOCKBACK)
-        #         if object.health:
-        #             self.window.images.append(
-        #                 (
-        #                     self.x, self.y,
-        #                     projectile["arrow"], 0.7,
-        #                     self.angle,
-        #                 )
-        #             )
-        #             self.remove()
-        
         if self.bottom > self.window.height or \
             self.top < 0 or \
             self.left > self.window.width or \
@@ -210,11 +196,9 @@ class Soldier(PhysicsObject):
         if self.allegiance == PLAYER:
             self.shape.filter = ShapeFilter(*red_filter)
             self.append_texture(load_texture(soldier["player_light_infantry_dead"]))
-            self.shape.collision_type = 1
         else:
             self.shape.filter = ShapeFilter(*blue_filter)
             self.append_texture(load_texture(soldier["enemy_light_infantry_dead"]))
-            self.shape.collision_type = 2
 
     def knockback(self, strength):
         self.reverse(strength)
