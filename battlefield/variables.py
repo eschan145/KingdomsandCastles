@@ -6,6 +6,7 @@ import sys
 
 from arcade import load_texture
 from math import atan2, cos, sin
+from pymunk import CollisionHandler, ShapeFilter
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -15,10 +16,10 @@ sys.path.append(parent)
 from constants import *
 from file import soldier, projectile
 from geometry import Point, chance, check_collision, get_closest
-from sprite import Object
+from sprite import PhysicsObject
 
 
-class Arrow(Object):
+class Arrow(PhysicsObject):
     
     def __init__(self, shooter, target):
 
@@ -29,7 +30,7 @@ class Arrow(Object):
         
         """
 
-        Object.__init__(self, projectile["arrow"], 0.8)
+        PhysicsObject.__init__(self, projectile["arrow"], 0.8)
 
         self.x = shooter.x
         self.y = shooter.y
@@ -40,7 +41,7 @@ class Arrow(Object):
         self.target = target
 
         self.accuracy = 0
-        self.speed = 1
+        self.speed = ARROW_MAXIMUM_SPEED
 
         self.shooter.arrows -= 1
         
@@ -48,7 +49,7 @@ class Arrow(Object):
         self.accuracy_y = randint(-ARROW_ACCURACY, ARROW_ACCURACY)
         
         if self.shooter.archer:
-            self.speed = 0.7
+            self.speed = ARROW_MAXIMUM_ARCHER_SPEED
 
             self.accuracy_x = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
             self.accuracy_y = randint(int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
@@ -56,35 +57,13 @@ class Arrow(Object):
         self.point = Point(self.target.x + self.accuracy_x,
                            self.target.y + self.accuracy_y)
         
-        dest_x = self.point.x
-        dest_y = self.point.y
+        self.shape.filter = arrow_filter
+        self.body.filter = arrow_filter
 
-        x_diff = dest_x - self.shooter.x
-        y_diff = dest_y - self.shooter.x
-        angle = atan2(y_diff, x_diff)
-
-        force = [cos(angle), sin(angle)]
-        size = max(self.shooter.width, self.shooter.height) / 2
-
-        self.center_x += size * force[0]
-        self.center_y += size * force[1]
+        self.destination_point = self.point.x, self.point.y
 
         self.window.projectile_list.append(self)
-        self.window.physics.add_sprite(
-                                       self,
-                                       mass=0.1,
-                                       damping=1,
-                                       friction=0.6,
-                                       collision_type="bullet",
-                                       elasticity=0
-        )
-
-        # Taking into account the angle, calculate our force.
-        force[0] *= -ARROW_MOVE_FORCE
-        force[1] *= -ARROW_MOVE_FORCE
         
-        self.window.physics.apply_force(self, force)
-
         def arrow_soldier_handler(sprite_a, sprite_b, arbiter, space, data):
             soldier = self.window.physics.get_sprite_for_shape(arbiter[0])
 
@@ -101,31 +80,71 @@ class Arrow(Object):
                         )
                     )
                     self.remove()
-
-        self.window.physics.add_collision_handler("arrow", "soldier", post_handler=arrow_soldier_handler)
-
-    def update(self):
-        Object.update(self)
-
-        if self.speed < ARROW_MAXIMUM_SPEED:
-            self.speed += ARROW_ACCELERATION
-        else:
-            self.speed -= ARROW_ACCELERATION
         
-        # for object in check_collision(self, self.window.player_list):
-        #     if self.shooter.allegiance == ENEMY and \
-        #         isinstance(object, Soldier):
-        #         object.health -= self.speed * ARROW_DAMAGE
-        #         object.knockback(ARROW_KNOCKBACK)
-        #         if object.health:
-        #             self.window.images.append(
-        #                 (
-        #                     self.x, self.y,
-        #                     projectile["arrow"], 0.7,
-        #                     self.angle,
-        #                 )
-        #             )
-        #             self.remove()
+    def update(self):
+        PhysicsObject.update(self)
+
+        if self.speed > 0:
+            self.speed -= ARROW_SPEED_LOSS
+        else:
+            self.speed = 0
+
+        dest_x = self.point.x
+        dest_y = self.point.y
+
+        x_diff = dest_x - self.shooter.x
+        y_diff = dest_y - self.shooter.y
+        angle = atan2(y_diff, x_diff)
+
+        force = [cos(angle), sin(angle)]
+
+        # Taking into account the angle, calculate our force.
+        force[0] *= self.speed
+        force[1] *= self.speed
+
+        self.force = force
+
+        arrow_player_collision = check_collision(self, self.window.player_list)
+        arrow_enemy_collision = check_collision(self, self.window.enemy_list)
+        
+        for soldier in arrow_player_collision:
+            if self.shooter.allegiance == ENEMY:
+                damage = abs(max(self.force))
+                if not damage:
+                    damage = 1 # Even slow arrows cause damage
+                
+                soldier.health -= damage * ARROW_DAMAGE
+
+                if soldier.health:
+                    self.window.images.append(
+                        (
+                            self.x, self.y,
+                            projectile["arrow"], 0.7,
+                            self.angle,
+                        )
+                    )
+                    self.remove()
+
+        for soldier in arrow_enemy_collision:
+            if self.shooter.allegiance == PLAYER:
+                damage = abs(max(self.force))
+                if not damage:
+                    damage = 1 # Even slow arrows cause damage
+                
+                soldier.health -= damage * ARROW_DAMAGE
+
+                # print(damage, ARROW_DAMAGE)
+
+                # print(self.force)
+                if soldier.health:
+                    self.window.images.append(
+                        (
+                            self.x, self.y,
+                            projectile["arrow"], 0.7,
+                            self.angle,
+                        )
+                    )
+                    self.remove()
         
         # for object in check_collision(self, self.window.enemy_list):
         #     if self.shooter.allegiance == PLAYER and \
@@ -149,7 +168,7 @@ class Arrow(Object):
             self.remove()
 
 
-class Soldier(Object):
+class Soldier(PhysicsObject):
 
     def __init__(self, allegiance, rivals,
                  light_infantry=False, heavy_infantry=False, archer=False):
@@ -158,7 +177,6 @@ class Soldier(Object):
         
         Soldiers have allegiance to either the player or the enemy. A rivals
         parameter specifies its enemy side, referenced in a SpriteList.
-
         They can be of multiple types:
             * Light infantry        - Ordinary foot soldiers
             * Heavy infantry        - Heavily armored but slower foot soldiers
@@ -170,7 +188,7 @@ class Soldier(Object):
         else:
             image = soldier["enemy_light_infantry"]
 
-        Object.__init__(self, image, 0.5)
+        PhysicsObject.__init__(self, image, 0.5)
 
         self.allegiance = allegiance
         self.rivals = rivals
@@ -190,9 +208,13 @@ class Soldier(Object):
         self.weapon = RANGE
 
         if self.allegiance == PLAYER:
+            self.shape.filter = ShapeFilter(*red_filter)
             self.append_texture(load_texture(soldier["player_light_infantry_dead"]))
+            self.shape.collision_type = 1
         else:
+            self.shape.filter = ShapeFilter(*blue_filter)
             self.append_texture(load_texture(soldier["enemy_light_infantry_dead"]))
+            self.shape.collision_type = 2
 
     def knockback(self, strength):
         self.reverse(strength)
