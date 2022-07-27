@@ -1,10 +1,11 @@
 """Define some geometric functions for Armies."""
 
 from cmath import cos, sin
+from operator import pos, neg
 from random import randrange
-from arcade import Sprite, SpriteList
-from math import atan2, degrees, hypot, radians
-from typing import cast, List
+from arcade import Sprite, SpriteList, schedule, unschedule
+from math import atan2, degrees, hypot, pow, radians, sqrt
+from typing import Tuple, cast, List
 
 points = 0 # Number of points to create unique keysets
 pi = 3.14159265358979
@@ -31,12 +32,20 @@ __all__ = [
 
 
 class Point:
-    """Initialize a named Point. This is used in almost every x and y
-    coordinate in Armies."""
-    
+    """A named 2D Point. This is used in almost every x and y coordinate in
+    Armies. Note that this does not have to be used for points, it can be used
+    as vectors for gravity, velocity, and more. This was inspired by
+    pymunk.vec2d.Vec2d"""
+
     def __init__(self, x, y, name=False):
         """Initialize a named Point.
-        
+
+        >>> point = Point(100, 100)
+        >>> point.x, point.y
+        100, 100
+        >>> point["name"]
+        1
+
         x - x coordinate of Point
         y - y coordinate of Point
         name - unique name of Point (identifier). This is automatically
@@ -48,15 +57,33 @@ class Point:
         properties:
             x - x coordinate of Point
             y - y coordinate of Point
+            vx - horizontal velocity of Point
+            vy - vertical velocity of Point
             name - unique keyname of Point
             data - map of properties
         
         methods:
             __getitem__ - Return a value from key item of data
+            __iter__ - Return a list of the x and y coordinates
+            __del__ - Delete point and remove it from scheduling
+            __add__ - Add a Point or tuple to x and y coordinates
+            __sub__ - Subtract a Point or tuple to x and y coordinates
+            __mul__ - Multiply a number with x and y coordinates
+            __truediv__ - Divide a number with x and y coordinates
+            __floordiv__ - Floor divide a number with x and y coordinates
+
+            get_distance - Get the distance between another Point
+            is_in_polygon - Check if exists inside a polygon
+            get_closest - Get the closest Point given a list
+            get_length - Get the length of the Point
+            get_squared_length - Get the squared length of the Point
         """
 
         self.x = x
         self.y = y
+
+        self.vx = 0
+        self.vy = 0
 
         if not name:
             # Generate a unique keyset name for this point
@@ -71,6 +98,8 @@ class Point:
             "name" : self.name
         }
 
+        schedule(self.update, 1 / 60)
+
     def __getitem__(self, item):
         """Return a value from key item of data.
         
@@ -81,11 +110,253 @@ class Point:
         """
 
         return self.data.get(item, False)
+    
+    def __iter__(self):
+        """Return a list of the x and y coordinates.
         
+        returns: list (x, y)
+        """
+
+        return [self.x, self.y]
+    
+    def __del__(self):
+        """Delete Point and remove it from event scheduling."""
+
+        unschedule(self.update)
+    
+    ### MATHEMATICAL FUNCTIONS ###
+
+    def __add__(self, point):
+        """Add a Point or tuple to x and y coordinates.
+
+        >>> Point(5, 3) + (6, 9)
+        11, 12
+        
+        point - point to add coordinates
+        
+        parameters: Point or tuple
+        returns: tuple
+        """
+
+        if isinstance(point, Tuple):
+            self.x += point[0]
+            self.y += point[1]
+
+            return
+        
+        self.x += point.x
+        self.y += point.y
+
+        return self.x, self.y
+    
+    def __sub__(self, point):
+        """Subtract a Point or tuple from x and y coordinates.
+
+        >>> Point(5, 3) - Point(2, 1)
+        3, 2
+        
+        point - point to subtract coordinates
+        
+        parameters: Point or tuple
+        returns: tuple
+        """
+
+        if isinstance(point, Tuple):
+            self.x -= point[0]
+            self.y -= point[1]
+
+            return
+        
+        self.x -= point.x
+        self.y -= point.y
+
+        return self.x, self.y
+    
+    def __mul__(self, value):
+        """Multiply a float by x and y coordinates.
+
+        >>> Point(5, 3) * 2.5
+        12.5, 7
+        
+        value - value to multiply coordinates
+        
+        parameters: float
+        returns: tuple
+        """
+
+        self.x *= value
+        self.y *= value
+
+        return self.x, self.y
+    
+    def __truediv__(self, value):
+        """Divide x and y coordinates by value.
+
+        >>> Point(5, 3) / 2
+        2.5, 1.5
+        
+        value - value to divide coordinates
+        
+        parameters: float
+        returns: tuple
+        """
+
+        self.x /= value
+        self.y /= value
+
+        return self.x, self.y
+    
+    def __floordiv__(self, value):
+        """Floor divide x and y coordinates by value (integer division).
+        
+        >>> Point(5, 3) // 2
+        2, 1
+        
+        value - value to floor divide coordinates
+        returns: tuple
+        """
+
+        self.x //= value
+        self.y //= value
+
+        return self.x, self.y
+
+    def __radd__(self, point):
+        """Add a Point or tuple to x and y coordinates. This is a reversed
+        addition.
+
+        >>> (5, 3) + Point(5, 3)
+        10, 6
+        
+        point - point to add coordinates
+        
+        parameters: Point or tuple
+        returns: tuple
+        """
+
+        return self.__add__(point)
+
+    def __rsub__(self, point):
+        """Subtract a Point or tuple from x and y coordinates. This is a 
+        reversed subtraction.
+
+        >>> (10, 3) - Point(5, 3)
+        5, 0
+        
+        point - point to add coordinates
+        
+        parameters: Point or tuple
+        returns: tuple
+        """
+
+        self.x = point.x - self.x
+        self.y = point.y - self.y
+
+        return self.x, self.y
+    
+    def __rmul__(self, value):
+        """Multiply a float by x and y coordinates. This is a reversed
+        multiplication.
+
+        >>> 2 * Point(5, 3)
+        10, 6
+        
+        value - value to multiply coordinates
+        
+        parameters: float
+        returns: tuple
+        """
+
+        return self.__mul__(value)
+    
+    def __pos__(self):
+        """Return the unary position (converting to positive).
+        
+        >>> + Point(-5, 3)
+        5, 3
+
+        returns: tuple
+        """
+
+        self.x = pos(self.x)
+        self.y = pos(self.y)
+
+        return self.x, self.y
+    
+    def __neg__(self):
+        """Return the negatated position (converting to negative).
+        
+        >>> - Point(-5, 3)
+        5, -3
+        
+        returns: tuple
+        """
+
+        self.x = neg(self.x)
+        self.y = neg(self.y)
+
+        return self.x, self.y
+
+    def get_distance(self, point):
+        """Get the distance between another Point. See get_distance for more
+        information.
+        
+        point - Point to get distance
+        
+        parameters: Point
+        returns: int - (distance between two points)
+        """
+
+        return get_distance(self, point)
+    
+    def is_in_polygon(self, polygon):
+        """Check if the x and y coordinates exist in a polygon.
+    
+        polygon - polygon to check if x and y coordinates exist in
+
+        parameters: int, int
+        returns: bool (True or False if Point exists in polygon)
+        """
+
+        return is_point_in_polygon(self, polygon)
+    
+    def get_closest(self, list):
+        """Get the closest Point from a list. See get_closest for more
+        information.
+        
+        list - list to get closest object
+        
+        parameters: List (list of Points)
+        returns: tuple ((closest, distance))
+        """
+
+        return get_closest(self, points)
+    
+    def get_squared_length(self):
+        """Return the squared length of the vector.
+        
+        returns: int
+        """
+
+        return self.x ** 2 + self.y ** 2
+    
+    def get_length(self):
+        """Return the length of the vector.
+
+        returns. int
+        """
+
+        return sqrt(self.x ** 2 + self.y ** 2)
+    
+    def update(self, delta):
+        self.x += self.vx
+        self.y += self.vy    
+
 
 def square(value):
-    """Calculate the squared value of a number.
-    
+    """Calculate the squared value of a number. This forms a quadratic function,
+    which is x².
+
     value - value to take to the power of two
     
     parameters: int
@@ -95,8 +366,9 @@ def square(value):
     return pow(value, 2)
 
 def cube(value):
-    """Calculate the cubed value of a number.
-    
+    """Calculate the cubed value of a number. This forms a cubic function, which
+    is x³.
+
     value - value to take to the power of three
 
     parameters: int
@@ -163,10 +435,10 @@ def are_polygons_intersecting(a, b):
     return True
 
 def is_point_in_polygon(point, polygon):
-    """See if the given Point exists in a polygon.
+    """Check if the given Point exists in a polygon.
     
     point - Point to check if in polygon
-    polygon - polygon to recieve test
+    polygon - polygon to check if Point coordinates exist in
 
     parameters: int, int
     returns: bool (True or False if Point exists in polygon)
@@ -271,10 +543,11 @@ def check_collision(a, b):
         return sprites
 
 def get_distance(a, b):
-    """Get the distance between two Points.
+    """Get the distance between two objects. Note that other data types may be
+    used, as long as they have x and y properties.
     
-    a - first point to get distance
-    b - second point to get distance
+    a - first object to get distance
+    b - second object to get distance
     
     parameters: Point, Point
     returns: int - (distance between two points
@@ -283,14 +556,15 @@ def get_distance(a, b):
     return hypot(a.x - b.x, a.y - b.y)
 
 def get_closest(object, list):
-    """Get the closest object from a list to another object.
+    """Get the closest object from a list to another object. Note that other
+    data types can be used, as long as they work with get_distance.
     
     object - object to get distance
     list - list to get closest object
     
     parameters:
-        object - Object or PhysicsObject
-        list - List or SpriteList
+        object - Point
+        list - List (list of Points)
     returns: tuple ((closest, distance))
     """
 
