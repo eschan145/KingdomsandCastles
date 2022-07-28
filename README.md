@@ -5,7 +5,7 @@ In this game, you command an army of soldiers. They can be of the following type
 
 1. Light infantry         — Regular ordinary foot soldiers
 2. Heavy infantry         — Heavily armored but slower foot soldiers
-3. Archers                — Soldier specialized in use with a bow
+3. Archers                — Soldiers specialized in use with a bow
 
 Your job is to battle an enemy army. Your army is split up into multiple units; each one you can command at your will. You can assign commands to inidividual units. Units can contain smaller units with them, culminating into one huge army. This simulation is designed to be as realistic as possible, so soldiers will take longer to move up hills, bodies are not removed, units somewhat dissolve when commander is killed, etc.
 
@@ -406,7 +406,7 @@ class ColorPicker2(ColorPicker):
     def __init__(self):
         ColorPicker.__init__(self)
         
-        self.push_handlers(self.on_color_pick)
+        self.window.push_handlers(self.on_color_pick)
        
     def on_color_pick(self, color):
         """A color is picked"""
