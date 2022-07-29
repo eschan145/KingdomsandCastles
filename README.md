@@ -303,7 +303,9 @@ An ellipse can also be called an oval.
 |color|`tuple`. Defaults to `BLACK`|color of ellipse in RGB|
 
 #### Sector
-A sector is a slice of a circle. It is the most complex of the shapes.
+A sector is a slice of a circle. During `pyglet`'s `shape` development, there were originally three arc types, one of which was evolved to a individual `Sector` class.
+
+https://github.com/pyglet/pyglet/issues/349
 
 |Parameter||Details|
 |-|-|-|
