@@ -1,11 +1,12 @@
 """Define some geometric functions for Armies."""
 
+from arcade import Sprite, SpriteList, get_window, schedule, unschedule
 from cmath import cos, sin
+from math import atan2, degrees, hypot, pow, radians, sqrt
 from operator import pos, neg
 from random import randrange
-from arcade import Sprite, SpriteList, schedule, unschedule
-from math import atan2, degrees, hypot, pow, radians, sqrt
 from typing import Tuple, cast, List
+from struct import unpack
 
 points = 0 # Number of points to create unique keysets
 pi = 3.14159265358979
@@ -35,10 +36,26 @@ class Point:
     """A named 2D Point. This is used in almost every x and y coordinate in
     Armies. Note that this does not have to be used for points, it can be used
     as vectors for gravity, velocity, and more. This was inspired by
-    pymunk.vec2d.Vec2d"""
+    pymunk.vec2d.Vec2d.
+    
+    A Point supports operations, so you can perform many computations with
+    Points. Take a look at the below example.
+    
+    >>> a = Point(5, 3)
+    >>> b = Point(5, 3)
+    >>> a + b
+    10, 6
+    
+    It supports:
+        - Addition
+        - Subtraction
+        - Multiplication
+        - Division
+        - Floor division
+    """
 
     def __init__(self, x, y, name=False):
-        """Initialize a named Point.
+        """Initialize a named object-oriented Point.
 
         >>> point = Point(100, 100)
         >>> point.x, point.y
@@ -100,8 +117,23 @@ class Point:
 
         schedule(self.update, 1 / 60)
 
+    def __call__(self, *args, **kwds):
+        """Return a tuplized version of the Point.
+        
+        >>> a = Point(5, 3)
+        >>> a()
+        5, 3
+
+        returns: tuple (x and y coordinates)
+        """
+
+        return (self.x, self.y)
+        
     def __getitem__(self, item):
         """Return a value from key item of data.
+
+        >>> Point(5, 3)["x"]
+        5
         
         item - key to find value
         
@@ -109,21 +141,33 @@ class Point:
         returns: str
         """
 
+        self.data["x"] = self.x
+        self.data["y"] = self.y
+        self.data["name"] = self.name
+
         return self.data.get(item, False)
     
     def __iter__(self):
         """Return a list of the x and y coordinates.
         
+        >>> iter(Point(5, 3))
+        5, 3
+
         returns: list (x, y)
         """
 
         return [self.x, self.y]
     
     def __del__(self):
-        """Delete Point and remove it from event scheduling."""
+        """Delete Point and remove it from event scheduling.
+        
+        >>> a = Point(5, 3)
+        >>> del a
+        """
 
-        unschedule(self.update)
-    
+        try: unschedule(self.update)
+        except AttributeError: pass # No scheduling... pretty mysterious
+
     ### MATHEMATICAL FUNCTIONS ###
 
     def __add__(self, point):
@@ -509,38 +553,136 @@ def _check_collision(a, b):
         
     return intersection
 
-def check_collision(a, b):
-    """Check for collisions between two things. Multiple datatypes are
-    supported. You may use a Object or PhysicsObject, a SpriteList, or a List as parameters and it will calculate the collisions for you.
+def get_nearby_sprites(object, list):
+    """Internal function used by GPU collision check.
     
+    object - object to get nearby objects
+    list - list of nearby objects
+    
+    parameters: Object, PhysicsObject
+    returns: list (list of objects selected by the transformation)
+    """
+
+    count = len(list)
+    if count == 0:
+        return []
+
+    # Update the position and size to check
+    ctx = get_window().ctx
+    list._write_sprite_buffers_to_gpu()
+
+    ctx.collision_detection_program["check_pos"] = object.x, object.y
+    ctx.collision_detection_program["check_size"] = object.width, object.height
+
+    # Ensure the result buffer can fit all the sprites (worst case)
+    buffer = ctx.collision_buffer
+    if buffer.size < count * 4:
+        buffer.orphan(size=count * 4)
+
+    # Run the transform shader emitting sprites close to the configured position and size.
+    # This runs in a query so we can measure the number of sprites emitted.
+    with ctx.collision_query:
+        list._geometry.transform(  # type: ignore
+            ctx.collision_detection_program,
+            buffer,
+            vertices=count,
+        )
+
+    # Store the number of sprites emitted
+    emit_count = ctx.collision_query.primitives_generated
+
+    # If no sprites emitted we can just return an empty list
+    if emit_count == 0:
+        return []
+
+    # .. otherwise build and return a list of the sprites selected by the transform
+    return [
+        list[i]
+        for i in unpack(f'{emit_count}i', buffer.read(size=emit_count * 4))
+    ]
+
+def check_collision(a, b, type=None, method=0):
+    """Check for collisions between two things. Multiple datatypes are
+    supported. You may use a Object or PhysicsObject, a SpriteList, or a List as
+    parameters and it will calculate the collisions for you. Optionally, you can
+    specify the collision type with the third type parameter. This can be used
+    for optimization.
+
+    Spatial hash is a new method developed by Python arcade for detecting
+    collisions. This will speed up collisions with motionless objects, but will
+    result with buggy moving with active, moving objects.
+
+    Arcade divides the screen up into a grid. We can track which grid location
+    each object overlaps, and put them in a hash map. For each grid location, we
+    can quickly pull the object in that grid in a fast O* operation. When
+    looking for object that collide with our target object, we only look at
+    objects in sharing its grid location. This can reduce checks from 50,000 to
+    just 3 or 4. If the object moves, we have to recalculate and re-hash its
+    location, which reduces speed.
+
+    The method parameter specifies the type of checking collisions:
+        0: automatic select:
+            - Spatial if avaliable
+            - GPU if 1,500+ objects
+            - Simple
+        1: Spatial hashing if avaliable
+        2: GPU based (recommended with 1,500+ objects)
+        3: Simple-check
+
     a - first item to check collision with
     b - second item to check collision with
+    type - optional type of collsions
     
     parameters: 
         a - Object or PhysicsObject,
         b - PhysicsObject or SpriteList or List
     returns: list (list of collisions)
+
+
     """
     
-    if isinstance(b, Sprite):
+    single = False
+    double = False
+    triple = False
+
+    if type:
+        if type == Sprite: single = True
+        elif type == SpriteList: double = True
+        elif type == List: triple = True
+    
+    else:
+        if isinstance(b, Sprite): single = True
+        elif isinstance(b, SpriteList): double = True
+        elif isinstance(b, List): triple = True
+    
+    if single:
         return _check_collision(a, b)
 
-    elif isinstance(b, SpriteList):
+    elif double:
+        if b.spatial_hash and (method == 1 or method == 0):
+        # Spatial
+            b_ = b.spatial_hash.get_objects_for_box(a)
+        elif method == 3 or (method == 0 and len(b) <= 1500):
+            b_ = b  # type: ignore
+        else:
+            # GPU transform
+            b_ = get_nearby_sprites(a, b)  # type: ignore
+
         return [
             sprite
-            for sprite in b
+            for sprite in b_
             if a is not b and _check_collision(a, sprite)
         ]
 
-    elif isinstance(b, List):
-        sprites = []
+    elif triple:
+        list = []
         
-        for spritelist in b:
-            for sprite in spritelist:
-                if a is not sprite and _check_collision(a, sprite):
-                    sprites.append(sprite)
+        for b in b:
+            for object in b:
+                if a is not object and _check_collision(a, object):
+                    list.append(object)
 
-        return sprites
+        return list
 
 def get_distance(a, b):
     """Get the distance between two objects. Note that other data types may be
@@ -555,9 +697,34 @@ def get_distance(a, b):
 
     return hypot(a.x - b.x, a.y - b.y)
 
+def get_distance_(a, b):
+    """Get the distance between two objects. Note that other data types may be
+    used, as long as they have x and y properties. This uses a different
+    method:
+
+    d = √(x₁ — x₂)²＋(y₁ — y₂)²
+
+    NOTE: this method is less efficient than get_distance, as it uses more
+          steps. But, they both yield the same result.
+    
+    >>> a = Point(5, 5)
+    >>> b = Point(5, 3)
+    >>> get_distance(a, b) == get_distance_(a, b)
+    True
+    
+    a - first object to get distance
+    b - second object to get distance
+    
+    parameters: Point, Point
+    returns: int - (distance between two points
+    """
+
+    return sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+
 def get_closest(object, list):
     """Get the closest object from a list to another object. Note that other
-    data types can be used, as long as they work with get_distance.
+    data types can be used, as long as they work with get_distance (meaning
+    they have x and y properties).
     
     object - object to get distance
     list - list to get closest object
@@ -609,7 +776,10 @@ def rotate_point(point, center, degrees):
     x = round(rotated_x + center.x, rounding_precision)
     y = round(rotated_y + center.y, rounding_precision)
 
-    return Point(x, y)
+    point.x = x
+    point.y = y
+
+    return x, y
 
 def get_angle_degrees(a, b):
     """Get angle degrees between two Points.
@@ -627,7 +797,6 @@ def get_angle_degrees(a, b):
     angle = degrees(atan2(x_diff, y_diff))
 
     return angle
-
 
 def get_angle_radians(a, b):
     """Get angle radians between two Points.
@@ -683,10 +852,10 @@ def set_hitbox(object):
     if not object.height:
         height = 1
         
-    x1, y1 = -object.width / 2, -height / 2
-    x2, y2 = +object.width / 2, -height / 2
-    x3, y3 = +object.width / 2, +height / 2
-    x4, y4 = -object.width / 2, +height / 2
+    x1, y1 = -object.width / 2, - height / 2
+    x2, y2 = +object.width / 2, - height / 2
+    x3, y3 = +object.width / 2, + height / 2
+    x4, y4 = -object.width / 2, + height / 2
 
     return [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]
 
