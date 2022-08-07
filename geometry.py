@@ -1,4 +1,9 @@
-"""Define some geometric functions for Armies."""
+"""Define some geometric functions for Armies. The most valuable object here
+is the Point class, which houses many coordinate points.
+
+TODO: Add more features to Points
+      Upgrade collision checks
+"""
 
 from arcade import Sprite, SpriteList, get_window, schedule, unschedule
 from cmath import cos, sin
@@ -52,9 +57,12 @@ class Point:
         - Multiplication
         - Division
         - Floor division
+    
+    Additionally, many features are implemented for extra functionality and
+    ease of access.
     """
 
-    def __init__(self, x, y, name=False):
+    def __init__(self, x, y, name=None):
         """Initialize a named object-oriented Point.
 
         >>> point = Point(100, 100)
@@ -78,8 +86,14 @@ class Point:
             vy - vertical velocity of Point
             name - unique keyname of Point
             data - map of properties
+            length - length of the Point
+            angle - angle of the Point
         
         methods:
+            _get_length - Get the current length of the Point (property)
+            _get_angle - Get the current angle of the Point (property)
+
+            __call__ - Return a tuple of the Point
             __getitem__ - Return a value from key item of data
             __iter__ - Return a list of the x and y coordinates
             __del__ - Delete point and remove it from scheduling
@@ -94,6 +108,10 @@ class Point:
             get_closest - Get the closest Point given a list
             get_length - Get the length of the Point
             get_squared_length - Get the squared length of the Point
+            get_nearest_point - Get the nearest Point
+            scale_to_length - Scale the Point to a given length
+            rotate - Rotate the Point a certain radians
+            tuplize - Return a tuplized version of the Point (x, y)
         """
 
         self.x = x
@@ -116,6 +134,49 @@ class Point:
         }
 
         schedule(self.update, 1 / 60)
+    
+    def _get_position(self):
+        """Get the position of the Point as a tuple (self.x, self.y).
+        
+        returns: tuple (self.x, self.y)
+        """
+
+        return self.position
+    
+    def _set_position(self, position):
+        """Set the position of the Point as a tuple (self.x, self.y).
+        
+        position - new position of Point
+        
+        parameters: int
+        """
+
+        self.x = position[0]
+        self.y = position[1]
+
+    def _get_length(self):
+        """Property function of getting the length of the Point. This may not
+        be set.
+        
+        returns: float
+        """
+
+        # Use math.pow for faster C functions
+        return sqrt(pow(self.x, 2) + pow(self.y, 2))
+    
+    def _get_angle(self):
+        """Get the current angle of the Point in radians.
+        
+        returns: float
+        """
+
+        if self.get_squared_length() == 0:
+            return 0
+        return atan2(self.y, self.x)
+
+    position = property(_get_position, _set_position)    
+    length = property(_get_length)
+    angle = property(_get_angle)
 
     def __call__(self, *args, **kwds):
         """Return a tuplized version of the Point.
@@ -127,7 +188,7 @@ class Point:
         returns: tuple (x and y coordinates)
         """
 
-        return (self.x, self.y)
+        return self.position
         
     def __getitem__(self, item):
         """Return a value from key item of data.
@@ -191,7 +252,7 @@ class Point:
         self.x += point.x
         self.y += point.y
 
-        return self.x, self.y
+        return self.position
     
     def __sub__(self, point):
         """Subtract a Point or tuple from x and y coordinates.
@@ -214,7 +275,7 @@ class Point:
         self.x -= point.x
         self.y -= point.y
 
-        return self.x, self.y
+        return self.position
     
     def __mul__(self, value):
         """Multiply a float by x and y coordinates.
@@ -231,7 +292,7 @@ class Point:
         self.x *= value
         self.y *= value
 
-        return self.x, self.y
+        return self.position
     
     def __truediv__(self, value):
         """Divide x and y coordinates by value.
@@ -248,7 +309,7 @@ class Point:
         self.x /= value
         self.y /= value
 
-        return self.x, self.y
+        return self.position
     
     def __floordiv__(self, value):
         """Floor divide x and y coordinates by value (integer division).
@@ -263,7 +324,7 @@ class Point:
         self.x //= value
         self.y //= value
 
-        return self.x, self.y
+        return self.position
 
     def __radd__(self, point):
         """Add a Point or tuple to x and y coordinates. This is a reversed
@@ -296,7 +357,7 @@ class Point:
         self.x = point.x - self.x
         self.y = point.y - self.y
 
-        return self.x, self.y
+        return self.position
     
     def __rmul__(self, value):
         """Multiply a float by x and y coordinates. This is a reversed
@@ -325,7 +386,7 @@ class Point:
         self.x = pos(self.x)
         self.y = pos(self.y)
 
-        return self.x, self.y
+        return self.position
     
     def __neg__(self):
         """Return the negatated position (converting to negative).
@@ -339,7 +400,7 @@ class Point:
         self.x = neg(self.x)
         self.y = neg(self.y)
 
-        return self.x, self.y
+        return self.position
 
     def get_distance(self, point):
         """Get the distance between another Point. See get_distance for more
@@ -382,19 +443,222 @@ class Point:
         returns: int
         """
 
-        return self.x ** 2 + self.y ** 2
+        return pow(self.x, 2) + pow(self.y, 2)
     
     def get_length(self):
         """Return the length of the vector.
 
-        returns. int
+        returns: int
         """
 
-        return sqrt(self.x ** 2 + self.y ** 2)
+        return sqrt(pow(self.x, 2) + pow(self.y, 2))
+    
+    def get_nearest_point(self, list=None):
+        """Return the nearest point and its distance. If a Point list is
+        provided it will use it.
+
+        list - list to get closest Point
+
+        parameters: list or tuple
+        returns: Point
+        """
+
+        global points
+
+        pointlist = list or points
+
+        return get_closest(self, pointlist)
+    
+    def get_angle_between(self, point):
+        """Get the angle betewen this and another Point in radians.
+        
+        point - point to get angle between
+
+        parameters: Point
+        returns: float (in radians)
+        """
+
+        cross = self.x * point.y - self.y * point.x
+        dot = self.x * point.x + self.y * point.y
+
+        return atan2(cross, dot)
+
+    def scale_to_length(self, length):
+        """Scale the Point to the given length.
+        
+        length - scale length of the Point
+        
+        parameters: float
+        returns: tuple
+        """
+
+        old = self.length
+
+        self.x = self.x * length / old
+        self.y = self.y * length / old
+
+        return self.position
+    
+    def rotate(self, angle):
+        """Rotate the Point a certain radians.
+        
+        angle - radians the Point should be rotated
+        
+        parameters: float
+        """
+        
+        cosine = cos(angle)
+        sine = sin(angle)
+
+        self.x = self.x * cosine - self.y * sine
+        self.y = self.x * sine + self.y * cosine
+
+        return self.position
+    
+    def normalized(self):
+        """Get a normalized copy of the Point
+
+        NOTE: will return 0 if the length of the vector is 0
+
+        return: tuple (self.x, self.y)
+        """
+
+        length = self.length
+
+        if length != 0:
+            return self / length
+        return self.position
+
+    def perpendicular(self):
+        """Create a perpendicular Point. This is done by a negative
+        reciprocal.
+        
+        returns: tuple (self.x, self.y)"""
+
+        self.x = -self.y
+        self.y = self.x
+
+        return self.position
+
+    def perpendicular_normal(self):
+        """Create a perpendicular normalized Point. This is done by dividing
+        the negative reciprocal of the x and y coordinates by the length.
+        
+        returns: tuple (self.x, self.y)
+        """
+        
+        length = self.length
+        if length != 0:
+            # Negative reciprocal
+
+            self.x = -self.y / length
+            self.y = self.x / length
+        
+        return self.position
+
+    def dot(self, point):
+        """The dot product between the Point and another.
+        
+        v1.dot(v2) → v1.× v2.x + v1.y × v2.y
+
+        point - other Point to get the dot product
+
+        parameters: Point
+        returns: float
+        """
+
+        return float(self.x * point.x + self.y * point.y)
+    
+    def projection(self, point):
+        """Project the Point over another Point.
+        
+        point - Point for the Point to be projected over
+        
+        parameters: Point
+        returns: tuple (self.x, self.y)
+        """
+
+        length_squared = point.x * point.x + point.y * point.y
+        if length_squared == 0:
+            self.position = (0, 0)
+        projected_length = self.dot(point)
+        new = projected_length / length_squared
+
+        self.x = point.x * new
+        self.y = point.y * new
+        
+        return self.position
+
+    def cross(self, point):
+        """The cross product between the vector and other vector
+            v1.cross(v2) → v1.x × v2.y — v1.y × v2.x
+
+        point - other Point to get cross product
+        
+        parameters: Point
+        returns: tuple (self.x, self.y)
+        """
+        
+        return self.x * point.y - self.y * point.x
+
+    def interpolate_to(self, point, range):
+        """Interpolate another Point into the Point given a range. This is
+        defined by:
+
+        y = y₁ + (x — x₁) [(y₂ — y₁) ÷ (x₂ — x₁)]
+
+        where
+        y       linear interpolation value
+        x       independent variable
+        x₁, y₁   values of the function at one point
+        x₂, y₂   values of the function at another point
+
+        See https://www.cuemath.com/interpolation-formula/ for details.
+        
+        point - Point to be interpolated into the Point
+        range - range of the interpolation
+        
+        parameters: Point, float
+        returns: tuple (self.x, self.y)
+        """
+
+        self.x = self.x + (point.x - self.x) * range
+        self.y = self.y + (point.y - self.y) * range
+        
+        return self.position
+
+    def convert_to_basis(self, vector):
+        """"Convert the Point to a basis given a vector.
+        
+        vector - vector of convertion
+        
+        parameters: multi-demensional list [(x, y), (x, y)]
+        returns: tuple (self.x, self.y)
+        """
+
+        self.x = self.dot(vector[0]) / Point(*vector[0]).get_squared_length()
+        self.y = self.dot(vector[1]) / Point(*vector[1]).get_squared_length()
+        
+        return self.position
+
+    def tuplize(self):
+        """Return a tuplized Point of the x and y coordinates in (x, y).
+        
+        returns: tuple (x, y)
+        """
+
+        return self.position
     
     def update(self, delta):
+        """Update the Point. This is called every tick of the update cycle.
+        
+        delta - time since the update function was last called
+        
+        parameters: float
+        """
+
         self.x += self.vx
-        self.y += self.vy    
+        self.y += self.vy  
 
 
 def square(value):
@@ -564,6 +828,7 @@ def get_nearby_sprites(object, list):
     """
 
     count = len(list)
+
     if count == 0:
         return []
 
@@ -637,8 +902,6 @@ def check_collision(a, b, type=None, method=0):
         a - Object or PhysicsObject,
         b - PhysicsObject or SpriteList or List
     returns: list (list of collisions)
-
-
     """
     
     single = False
@@ -719,7 +982,9 @@ def get_distance_(a, b):
     returns: int - (distance between two points
     """
 
-    return sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
+    # Use math.pow for faster C functions
+
+    return sqrt(pow((a.x - b.x), 2) + pow((a.y - b.y), 2))
 
 def get_closest(object, list):
     """Get the closest object from a list to another object. Note that other
@@ -768,13 +1033,13 @@ def rotate_point(point, center, degrees):
     radians_ = radians(degrees)
     cos_angle = cos(radians_)
     sin_angle = sin(radians_)
-    rotated_x = temp_x * cos_angle - temp_y * sin_angle
-    rotated_y = temp_x * sin_angle + temp_y * cos_angle
+    x = temp_x * cos_angle - temp_y * sin_angle
+    y = temp_x * sin_angle + temp_y * cos_angle
 
     # translate back
-    rounding_precision = 2
-    x = round(rotated_x + center.x, rounding_precision)
-    y = round(rotated_y + center.y, rounding_precision)
+    precision = 2
+    x = round(x + center.x, precision)
+    y = round(y + center.y, precision)
 
     point.x = x
     point.y = y
@@ -811,6 +1076,7 @@ def get_angle_radians(a, b):
     x_diff = b.x - a.x
     y_diff = b.y - a.y
     angle = atan2(x_diff, y_diff)
+
     return angle
 
 def degrees_to_radians(degrees, digits=2):
