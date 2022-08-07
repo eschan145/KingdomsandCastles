@@ -628,7 +628,9 @@ class Label(Widget):
 
         
 class Button(Widget):
-    """Button widget to invoke and call commands"""
+    """Button widget to invoke and call commands. Pressing on a Button invokes
+    its command, which is a function or callable.
+    """
     
     def __init__(
                  self, text, x, y, command=None, parameters=[], 
@@ -636,15 +638,31 @@ class Button(Widget):
                  callback=SINGLE
                 ):
 
+        """Initialize a Button. A Button has two components: an Image and a
+        Label.
+        
+        text - text to be displayed on the Button
+        x - x coordinate of the Button
+        y - y coordinate of the Button
+        command - command to be invoked when the Button is called
+        parameters - parameters of the callable when invoked
+        colors - colors of the Button
+        font - font of the Button
+        callback - how the Button is invoked:
+                   SINGLE - the Button is invoked once when pressed
+                   DOUBLE - the Button can be invoked multiple times in focus
+                   MULTIPLE - the Button can be invoked continuously
+        """
+
         # A two-component widget:
         #     - Image
         #     - Label
 
         self.image = Image(button[f"{colors[0]}_button_normal"], x, y)
         self.label = Label(text, x, y, font=font)
-        
+
         Widget.__init__(self)
-        
+
         self.text = text
         self.x = x
         self.y = y
@@ -660,19 +678,46 @@ class Button(Widget):
         self.hover_image = load_texture(button[f"{colors[0]}_button_hover"])
         self.press_image = load_texture(button[f"{colors[0]}_button_press"])
         self.disable_image = load_texture(button[f"{colors[0]}_button_disable"])
-        
-        self.activated = False
 
     def bind(self, *keys):
+        """Bind some keys to the Button. Invoking these keys activates the
+        Button. If the key Enter was binded to the Button, pressing Enter will
+        invoke its command and switches its display to a pressed state.
+
+        >>> button.bind(ENTER, PLUS)
+        [65293, 43]
+
+        *keys - keys to be binded
+
+        parameters: *int (32-bit)
+        returns: list
+        """
+
         self.keys = [*keys]
         return self.keys
 
     def unbind(self, *keys):
+        """Unbind keys from the Button.
+
+        >>> button.bind(ENTER, PLUS, KEY_UP, KEY_DOWN)
+        [65293, 43, 65362, 65364]
+        >>> button.unbind(PLUS, KEY_UP)
+        [65293, 65364]
+        
+        parameters: *int(32-bit)
+        returns: list
+        """
+
         for key in keys:
             self.keys.remove(key)
         return self.keys
         
     def invoke(self):
+        """Invoke the Button. This switches its image to a pressed state and
+        calls the command with the specified parameters. If the Button is
+        disabled this will do nothing.
+        """
+
         if self.disable or not self.command:
             return
         
@@ -684,23 +729,52 @@ class Button(Widget):
             self.command()
             
     def draw(self):
+        """Draw the Button. The component of the Button is the image, which takes
+        all of the collision points.
+        
+        1. Image - background image of the Button
+        2. Label - text of the Button
+        """
+
         self.image.draw()
         self.label.draw()
-            
+
+        # Update Label properties
+
         self.label.text = self.text
         self.label.colors[0] = self.colors[1]
         self.label.font = self.font
         self.label.label.anchor_x = CENTER
-        
+
         self.component = self.image
-        
-        self.activated = True
 
     def on_press(self, x, y, buttons, modifiers):
+        """The Button was pressed. This invokes its command if the mouse button
+        is the left one.
+        
+        TODO: add specifying proper mouse button in settings
+        
+        x - x coordinate of the press
+        y - y coordinate of the press
+        buttons - buttons that were pressed with the mouse
+        modifiers - modifiers being held down
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+
         if buttons == MOUSE_BUTTON_LEFT:
             self.invoke()
-        
+
     def on_key(self, keys, modifiers):
+        """A key is pressed. This is used for keyboard shortcuts when the
+        Button has focus.
+        
+        keys - key pressed
+        modifiers - modifier pressed
+        
+        parameters: int (32-bit), int (32-bit)
+        """
+
         if keys == SPACE and self.focus:
             self.invoke()
             
@@ -713,9 +787,10 @@ class Button(Widget):
                 self.invoke()
             
     def update(self):
-        if not self.activated:
-            return
-        
+        """Update the Button. This registers events and updates the Button
+        image.
+        """
+
         if self.hover:
             self.image.texture = self.hover_image
         if self.press:
@@ -739,7 +814,7 @@ class Button(Widget):
 class Slider(Widget):
     """Slider widget to display slidable values."""
 
-    value = 0
+    _value = 0
     switching = 0
     
     def __init__(self, text, x, y, colors=BLACK, font=DEFAULT_FONT,
@@ -764,9 +839,33 @@ class Slider(Widget):
         
         self.knob.left = self.bar.x - self.length / 2
         self.label.x = self.bar.left - self.padding
-        
+    
+    def _get_value(self):
+        return self._value
+
+    def _set_value(self, value):
+        min_knob_x = self.x + self.size
+        max_knob_x = self.x + self.bar.width - self.knob.width - self.size
+        half_knob_width = self.knob.width / 2
+
+        self._value = value
+
+        x = (max_knob_x - min_knob_x) * value / 100 \
+            + min_knob_x + half_knob_width
+        self.knob.x = max(min_knob_x, min(x - half_knob_width, max_knob_x))
+    
+    value = property(_get_value, _set_value)
+
     def update_knob(self, x):
-        self.switching = x
+        min_knob_x = self.x + self.size
+        max_knob_x = self.x + self.bar.width - self.knob.width - self.size
+        half_knob_width = self.knob.width / 2
+
+        # self.switching = x
+
+        self.knob.x = max(min_knob_x, min(x - half_knob_width, max_knob_x))
+        self._value = abs(((self.knob.x - min_knob_x) * 100) \
+                      / (min_knob_x - max_knob_x))
         self.value = round(abs(((self.knob.x - self.left) * self.size) \
                          / (self.left - self.right)))
         
@@ -804,28 +903,27 @@ class Slider(Widget):
             self.knob.x += direction
         
     def update(self):
-        if self.switching:
-            if self.knob.x <= self.switching and \
-               self.knob.right <= self.right:
-                # Knob too left, moving to the right
-                self.knob.x += SLIDER_VELOCITY
-            if self.knob.x > self.switching and \
-               self.knob.left >= self.left:
-                # Knob too right, moving to the left
-                self.knob.x -= SLIDER_VELOCITY
+        # if self.switching:
+        #     if self.knob.x <= self.switching and \
+        #        self.knob.right <= self.right:
+        #         # Knob too left, moving to the right
+        #         self.knob.x += SLIDER_VELOCITY
+        #     if self.knob.x > self.switching and \
+        #        self.knob.left >= self.left:
+        #         # Knob too right, moving to the left
+        #         self.knob.x -= SLIDER_VELOCITY
 
         if self.knob.left > self.left and \
            self.knob.right < self.right and \
            self.focus:
             if self.keys[KEY_RIGHT]:
-                self.switching += SLIDER_VELOCITY
-                self.knob.x += SLIDER_VELOCITY
+                self.value = self.value + 1
             if self.keys[KEY_LEFT]:
-                self.switching -= SLIDER_VELOCITY
-                self.knob.x -= SLIDER_VELOCITY
-                
+                self.value = self.value - 1
+
         self.bar.update()
         self.knob.update()
+        self.label.update()
 
 
 class Toggle(Widget):
@@ -842,15 +940,16 @@ class Toggle(Widget):
     on_right = False
     value = None
     switch = False
-    
+
     def __init__(
                  self, text, x, y,
                  colors=BLACK, font=DEFAULT_FONT,
                  default=True, padding=160
                 ):
-        
-        """Initialize a Toggle.
-        
+
+        """Initialize a Toggle. A Toggle is a widget that when pressed, switches
+        between True and False values.
+
         text - text to be displayed alongside the Toggle
         x - x coordinate of the Toggle
         y - y coordinate of the Toggle
@@ -889,6 +988,14 @@ class Toggle(Widget):
         self.knob.left = self.bar.left + 2
 
     def draw(self):
+        """Draw the toggle. The component of the toggle is the bar, which takes
+        all of the collision points.
+        
+        1. Bar (component)
+        2. Knob
+        3. Label
+        """
+
         self.bar.draw()
         self.knob.draw()
         self.label.draw()
@@ -907,14 +1014,39 @@ class Toggle(Widget):
         self.component = self.bar
         
     def on_press(self, x, y, buttons, modifiers):
-        self.switch = True
+        """The Toggle is pressed. This switches between True and False values. If
+        the Control key is held down during this, this will have no effect.
+        
+        x - x coordinate of the press
+        y - y coordinate of the press
+        buttons - buttons that were pressed with the mouse
+        modifiers - modifiers being held down
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+        
+        if not modifiers & CONTROL:
+            self.switch = True
 
     def on_key(self, keys, modifiers):
+        """A key is pressed. This is used for keyboard shortcuts when the Toggle
+        has focus. If the Space or Enter key is pressed, the Toggle will be
+        switched.
+        
+        keys - key pressed
+        modifiers - modifier pressed
+        
+        parameters: int (32-bit), int (32-bit)
+        """
+
         if self.focus:
             if keys == SPACE or keys == ENTER:
                 self.switch = True
         
     def update(self):
+        """Update the toggle. This updates its position and registers its
+        special effects.
+        """
+
         if self.on_left:
             self.value = True
         else:
@@ -1445,8 +1577,8 @@ class Entry(Widget):
     def on_key(self, keys, modifiers):
         """A key is pressed. This is used for keyboard shortcuts.
         
-        keys - key pressed (32-bit) int defined in keyboard
-        modifiers - modifier pressed (32-bit) int defined in keyboard
+        keys - key pressed
+        modifiers - modifier pressed
         
         parameters: int (32-bit), int (32-bit)
         """
