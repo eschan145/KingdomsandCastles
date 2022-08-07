@@ -2,21 +2,24 @@
 https://github.com/eschan145/Armies/blob/main/README.md"""
 
 
+from string import printable
+from tkinter import Tk
+from typing import Tuple
 from arcade import create_rectangle_filled, draw_rectangle_outline, \
-    enable_timings, get_four_byte_color,  get_fps, get_window, \
+    enable_timings, get_fps, get_window, \
     load_texture, run, schedule, set_window, unschedule
 from arcade import Sprite, SpriteList, Text, Window
 from cmath import tau
 
 from color import BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, GRAY, GRAY_BLUE, RED, WHITE
 from color import four_byte, scale_color
-from constants import BOTTOM, CENTER, DEFAULT_FONT, DISABLE_ALPHA, \
+from constants import BOTTOM, CENTER, DEFAULT_FONT, DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE, DISABLE_ALPHA, \
      ENTRY_BLINK_INTERVAL, LEFT, MULTIPLE, SINGLE, SLIDER_VELOCITY, \
-     TOGGLE_FADE, TOGGLE_VELOCITY, TOP, VERTICAL, X, Y
+     TOGGLE_FADE, TOGGLE_VELOCITY, TOP, VERTICAL
 from file import button, entry_normal, knob, none, slider_horizontal, \
      toggle_false, toggle_true, toggle_false_hover, toggle_true_hover
-from key import A, CONTROL, ENTER, KEY_LEFT, KEY_RIGHT, \
-     MOUSE_BUTTON_LEFT, SHIFT, SPACE, TAB
+from key import  A, C, CONTROL, ENTER, KEY_LEFT, KEY_RIGHT, MOTION_BACKSPACE, MOTION_BEGINNING_OF_FILE, MOTION_BEGINNING_OF_LINE, MOTION_COPY, MOTION_DELETE, MOTION_DOWN, MOTION_END_OF_FILE, MOTION_END_OF_LINE, MOTION_LEFT, MOTION_NEXT_WORD, MOTION_PREVIOUS_WORD, MOTION_RIGHT, MOTION_UP, \
+     MOUSE_BUTTON_LEFT, SHIFT, SPACE, TAB, V, X, Z
 from key import Keys
 
 from pyglet.event import EventDispatcher
@@ -26,9 +29,29 @@ from pyglet.text.layout import IncrementalTextLayout
 from pyglet.shapes import BorderedRectangle, Circle, Ellipse, Line, Triangle, Sector, Star, Polygon, Arc
 
 
-MAX = 2**32
+MAX = 2 ** 32
 
 enable_timings()
+
+clipboard = Tk()
+clipboard.withdraw()
+
+def clipboard_get():
+    """Get some text from the clipboard.
+    
+    returns: str"""
+    
+    return clipboard.clipboard_get()
+
+def clipboard_append(text):
+    """Append some text to the clipboard.
+    
+    text - text to append to the clipboard
+    
+    parameters: str
+    """
+    
+    clipboard.clipboard_append(text)
 
 def insert(index, text, add):
     return text[:index] + add + text[index:]
@@ -37,6 +60,53 @@ def delete(start, end, text):
     if len(text) > end:
         text = text[0: start:] + text[end + 1::]
     return text
+
+
+class Font:
+    """An object-oriented Font."""
+
+    def __init__(self,
+                 family=DEFAULT_FONT_FAMILY,
+                 size=DEFAULT_FONT_SIZE
+                ):
+                
+        """Initialize an object-oriented Font. This is an experimental
+        feature developed on August 4th 2022 and has no effect.
+        
+        family - family of the font (style)
+        size - size of the font (not in pixels
+        
+        parameters: int, int
+        """
+
+        self.family = family
+        self.size = size
+
+        self.list = [self.family, self.size]
+
+    def __getitem__(self, item):
+        """Get an item from the list.
+        
+        item - item whose value to be returned
+        
+        parameters: int
+        returns: str or int
+        """
+
+        return self.list[item]
+
+    def __setitem__(self, index, item):
+        """Get an item from the list.
+        
+        item - item whose value to be set
+        
+        parameters: int, str or int
+        """
+
+        self.list[index] = item
+
+
+default_font = Font()
 
 
 class Container(EventDispatcher):
@@ -378,16 +448,8 @@ class Image(Widget):
         
         self.x = x
         self.y = y
-            
-    def on_enter(self, x, y, dx, dy):pass
-    def on_leave(self, x, y, dx, dy):pass
-    def on_key(self, keys, modifiers):pass
-    def on_text(self, text):pass
-    def on_press(self, x, y, buttons, modifiers):pass
-    def on_release(self, x, y, buttons, modifiers):pass
-    def update(self):pass
-        
-   
+
+
 class Label(Widget):
     """Label widget to draw and display HTML text"""
     
@@ -580,7 +642,7 @@ class Button(Widget):
 
         self.image = Image(button[f"{colors[0]}_button_normal"], x, y)
         self.label = Label(text, x, y, font=font)
-                
+        
         Widget.__init__(self)
         
         self.text = text
@@ -674,152 +736,15 @@ class Button(Widget):
         self.image.update()
 
 
-class Toggle(Widget):
-    """Toggle widget to switch between true and false values"""
-    
-    def __init__(
-                 self, text, x, y,
-                 colors=BLACK, font=DEFAULT_FONT,
-                 default=True, padding=160
-                ):
-
-        # A three-component widget:
-        #     - Image
-        #     - Image
-        #     - Label
-
-        if default:
-            image = toggle_true
-        else:
-            image = toggle_false
-        
-        self.bar = Image(image, x, y)
-        self.knob = Image(knob, x, y)
-
-        self.label = Label(knob, x, y, font=font)
-                
-        Widget.__init__(self)
-             
-        self.text = text
-        self.x = x
-        self.y = y
-        self.colors = colors
-        self.font = font
-        self.padding = padding
-
-        self.true_image = load_texture(toggle_true)
-        self.false_image = load_texture(toggle_false)
-        self.hover_true_image = load_texture(toggle_true_hover)
-        self.hover_false_image = load_texture(toggle_false_hover)
-
-        self.knob.left = self.bar.left + 2
-
-        self.on_left = True
-        self.on_right = False
-        self.value = None
-        self.switch = False
-        
-        self.activated = False
-            
-    def draw(self):
-        self.bar.draw()
-        self.knob.draw()
-        self.label.draw()
-
-        # Repositioning
-        self.knob.y = self.y
-        
-        self.label.x = self.bar.left - self.padding
-        self.label.y = self.y
-        
-        self.label.text = self.text
-        self.label.colors[0] = self.colors
-        self.label.font = self.font
-        self.label.disable = self.disable
-        
-        self.component = self.bar
-        
-        self.activated = True
-
-    def on_press(self, x, y, buttons, modifiers):
-        self.switch = True
-
-    def on_key(self, keys, modifiers):
-        if self.focus:
-            if keys == SPACE or keys == ENTER:
-                self.switch = True
-        
-    def update(self):
-        if not self.activated:
-            return
-        
-        if self.on_left:
-            self.value = True
-        else:
-            self.value = False
-
-        if self.switch and not self.disable:
-            if self.on_left:
-                # Knob on the left, moving towards the right
-                if self.knob.right < self.bar.right - 2:
-                    self.knob.x += TOGGLE_VELOCITY
-                else:
-                    self.on_right = True
-                    self.on_left = False
-
-                    self.switch = False
-                    
-                if self.knob.x < self.x:
-                    try: self.bar.alpha -= TOGGLE_FADE
-                    except ValueError: pass
-                elif self.knob.x > self.x: # More than halfway
-                    try: self.bar.alpha += TOGGLE_FADE
-                    except ValueError: pass
-
-                    self.bar.texture = self.false_image
-                    if self.hover: self.bar.texture = self.hover_false_image
-
-            elif self.on_right:
-                # Knob on the right, moving towards the left
-                if self.knob.left > self.bar.left + 2:
-                    self.knob.x -= TOGGLE_VELOCITY
-                else:
-                    self.on_left = True
-                    self.on_right = False
-
-                    self.switch = False
-
-                if self.knob.x > self.x:
-                    try: self.bar.alpha -= TOGGLE_FADE
-                    except ValueError: pass
-                elif self.knob.x < self.x:
-                    try: self.bar.alpha += TOGGLE_FADE
-                    except ValueError: pass
-
-                    self.bar.texture = self.hover_true_image
-                    if self.hover: self.bar.texture = self.hover_true_image
-
-        else:
-            if self.hover:
-                if self.value: self.bar.texture = self.hover_true_image
-                else: self.bar.texture = self.hover_false_image
-            else:
-                if self.value: self.bar.texture = self.true_image
-                else: self.bar.texture = self.false_image
-
-        if self.disable:
-            if self.value: self.bar.texture = self.true_image
-            else: self.bar.texture = self.false_image
-
-        self.bar.update()
-        self.knob.update()
-
-
 class Slider(Widget):
-    """Slider widget to display slidable values"""
+    """Slider widget to display slidable values."""
+
+    value = 0
+    switching = 0
     
     def __init__(self, text, x, y, colors=BLACK, font=DEFAULT_FONT,
                  size=10, length=200, padding=50, orient=VERTICAL):
+        """Initialize a slider."""
         
         self.bar = Image(slider_horizontal, x, y)
         self.knob = Image(knob, x, y)
@@ -840,9 +765,6 @@ class Slider(Widget):
         self.knob.left = self.bar.x - self.length / 2
         self.label.x = self.bar.left - self.padding
         
-        self.value = 0
-        self.switching = 0
-
     def update_knob(self, x):
         self.switching = x
         self.value = round(abs(((self.knob.x - self.left) * self.size) \
@@ -905,10 +827,244 @@ class Slider(Widget):
         self.bar.update()
         self.knob.update()
 
- 
+
+class Toggle(Widget):
+    """Toggle widget to switch between true and false values. This uses
+    a special effect of fading during the switch.
+    """
+
+    true_image = load_texture(toggle_true)
+    false_image = load_texture(toggle_false)
+    hover_true_image = load_texture(toggle_true_hover)
+    hover_false_image = load_texture(toggle_false_hover)
+
+    on_left = True
+    on_right = False
+    value = None
+    switch = False
+    
+    def __init__(
+                 self, text, x, y,
+                 colors=BLACK, font=DEFAULT_FONT,
+                 default=True, padding=160
+                ):
+        
+        """Initialize a Toggle.
+        
+        text - text to be displayed alongside the Toggle
+        x - x coordinate of the Toggle
+        y - y coordinate of the Toggle
+        colors - text color of the Label
+        font - font of the Label
+        default - default value of the Toggle
+        padding - padding of the Label and the Toggle
+        
+        parameters: str, int, int, tuple, tuple, bool, int
+        """
+
+        # A three-component widget:
+        #     - Image
+        #     - Image
+        #     - Label
+
+        if default:
+            image = toggle_true
+        else:
+            image = toggle_false
+        
+        self.bar = Image(image, x, y)
+        self.knob = Image(knob, x, y)
+
+        self.label = Label(knob, x, y, font=font)
+                
+        Widget.__init__(self)
+             
+        self.text = text
+        self.x = x
+        self.y = y
+        self.colors = colors
+        self.font = font
+        self.padding = padding
+
+        self.knob.left = self.bar.left + 2
+
+    def draw(self):
+        self.bar.draw()
+        self.knob.draw()
+        self.label.draw()
+
+        # Repositioning
+        self.knob.y = self.y
+        
+        self.label.x = self.bar.left - self.padding
+        self.label.y = self.y
+        
+        self.label.text = self.text
+        self.label.colors[0] = self.colors
+        self.label.font = self.font
+        self.label.disable = self.disable
+        
+        self.component = self.bar
+        
+    def on_press(self, x, y, buttons, modifiers):
+        self.switch = True
+
+    def on_key(self, keys, modifiers):
+        if self.focus:
+            if keys == SPACE or keys == ENTER:
+                self.switch = True
+        
+    def update(self):
+        if self.on_left:
+            self.value = True
+        else:
+            self.value = False
+
+        if self.switch and not self.disable:
+            if self.on_left:
+                # Knob on the left, moving towards the right
+                if self.knob.right < self.bar.right - 2:
+                    self.knob.x += TOGGLE_VELOCITY
+                else:
+                    self.on_right = True
+                    self.on_left = False
+
+                    self.switch = False
+                    
+                if self.knob.x < self.x:
+                    try: self.bar.alpha -= TOGGLE_FADE
+                    except ValueError: pass
+                elif self.knob.x > self.x: # More than halfway
+                    try: self.bar.alpha += TOGGLE_FADE
+                    except ValueError: pass
+
+                    self.bar.texture = self.false_image
+                    if self.hover: self.bar.texture = self.hover_false_image
+
+            elif self.on_right:
+                # Knob on the right, moving towards the left
+                if self.knob.left > self.bar.left + 2:
+                    self.knob.x -= TOGGLE_VELOCITY
+                else:
+                    self.on_left = True
+                    self.on_right = False
+
+                    self.switch = False
+
+                if self.knob.x > self.x:
+                    try: self.bar.alpha -= TOGGLE_FADE
+                    except ValueError: pass
+                elif self.knob.x < self.x:
+                    try: self.bar.alpha += TOGGLE_FADE
+                    except ValueError: pass
+
+                    self.bar.texture = self.hover_true_image
+                    if self.hover: self.bar.texture = self.hover_true_image
+
+        else:
+            if self.hover:
+                if self.value: self.bar.texture = self.hover_true_image
+                else: self.bar.texture = self.hover_false_image
+            else:
+                if self.value: self.bar.texture = self.true_image
+                else: self.bar.texture = self.false_image
+
+        if self.disable:
+            if self.value: self.bar.texture = self.true_image
+            else: self.bar.texture = self.false_image
+
+        self.bar.update()
+        self.knob.update()
+
+
 class Caret(Caret):
-    """Caret used for pyglet.text.IncrementalTextLayout"""
+    """Caret used for pyglet.text.IncrementalTextLayout."""
+
+    def on_text_motion(self, motion, select=False):
+        """The caret was moved or a selection was made with the keyboard.
+
+        motion - motion the user invoked. These are found in the keyboard.
+                 MOTION_LEFT                MOTION_RIGHT
+                 MOTION_UP                  MOTION_DOWN                
+                 MOTION_NEXT_WORD           MOTION_PREVIOUS_WORD
+                 MOTION_BEGINNING_OF_LINE   MOTION_END_OF_LINE
+                 MOTION_NEXT_PAGE           MOTION_PREVIOUS_PAGE
+                 MOTION_BEGINNING_OF_FILE   MOTION_END_OF_FILE
+                 MOTION_BACKSPACE           MOTION_DELETE
+                 MOTION_COPY                MOTION_PASTE
+        select - a selection was made simultaneously
+
+        parameters: int (32-bit), bool
+        returns: event
+        """
+
+        if motion == MOTION_BACKSPACE:
+            if self.mark is not None:
+                self._delete_selection()
+            elif self._position > 0:
+                self._position -= 1
+                self._layout.document.delete_text(self._position, self._position + 1)
+                self._update()
+        elif motion == MOTION_DELETE:
+            if self.mark is not None:
+                self._delete_selection()
+            elif self._position < len(self._layout.document.text):
+                self._layout.document.delete_text(self._position, self._position + 1)
+        elif self._mark is not None and not select and \
+            motion is not MOTION_COPY:
+            self._mark = None
+            self._layout.set_selection(0, 0)
+
+        if motion == MOTION_LEFT:
+            self.position = max(0, self.position - 1)
+        elif motion == MOTION_RIGHT:
+            self.position = min(len(self._layout.document.text), self.position + 1)
+        elif motion == MOTION_UP:
+            self.line = max(0, self.line - 1)
+        elif motion == MOTION_DOWN:
+            line = self.line
+            if line < self._layout.get_line_count() - 1:
+                self.line = line + 1
+        elif motion == MOTION_BEGINNING_OF_LINE:
+            self.position = self._layout.get_position_from_line(self.line)
+        elif motion == MOTION_END_OF_LINE:
+            line = self.line
+            if line < self._layout.get_line_count() - 1:
+                self._position = self._layout.get_position_from_line(line + 1) - 1
+                self._update(line)
+            else:
+                self.position = len(self._layout.document.text)
+        elif motion == MOTION_BEGINNING_OF_FILE:
+            self.position = 0
+        elif motion == MOTION_END_OF_FILE:
+            self.position = len(self._layout.document.text)
+        elif motion == MOTION_NEXT_WORD:
+            pos = self._position + 1
+            m = self._next_word_re.search(self._layout.document.text, pos)
+            if not m:
+                self.position = len(self._layout.document.text)
+            else:
+                self.position = m.start()
+        elif motion == MOTION_PREVIOUS_WORD:
+            pos = self._position
+            m = self._previous_word_re.search(self._layout.document.text, 0, pos)
+            if not m:
+                self.position = 0
+            else:
+                self.position = m.start()
+
+        self._next_attributes.clear()
+        self._nudge()
+
     def _update(self, line=None, update_ideal_x=True):
+        """Update the caret. This is used internally for the Entry widget.
+        
+        line - current line of the caret
+        update_ideal_x - x coordinate of line is updated
+        
+        parameters: int, bool
+        """
+
         if line is None:
             line = self._layout.get_line_from_position(self._position)
             self._ideal_line = None
@@ -923,7 +1079,7 @@ class Caret(Caret):
         # add 1px offset to make caret visible on line start
         x += self._layout.x + 1
 
-        y += self._layout.y + self._layout.height - 11
+        y += self._layout.y + self._layout.height / 2
 
         font = self._layout.document.get_font(max(0, self._position - 1))
         self._list.position[:] = [x, y + font.descent, x, y + font.ascent]
@@ -936,19 +1092,83 @@ class Caret(Caret):
 
 
 class Entry(Widget):
-    """Entry widget to display user-editable text.
+    """Entry widget to display user-editable text. This makes use of the
+    pyglet.text.layout.IncrementalTextLayout and a modified version of its
+    built-in caret.
+
+    FIXME: caret not showing on line start
+           make caret transparent or invisible instead of changing color
+           caret glitching out on blinks at line end
     
-    PROBLEMS:
-        - Caret not showing on line start
+    TODO
+    1. Add rich text formatting (use pyglet.text.document.HTMLDocument)
+    2. Add show feature for passwords
+    3. Add copy, paste, select all, and more text features (COMPLETED)
+    4. Add undo and redo features
+    5. Enable updates for the layout for smoother performance. This raises
+       AssertionError, one that has been seen before.
+          
+    Last updated: August 4th 2022
+    """
+
+    blinking = True
+    switch = True
+    index = 0
+    length = 0
+    max = MAX
+    _validate = printable
+
+    undo_stack = []
+    redo_stack = []
+
+    # Validations
+    VALIDATION_LOWERCASE = "abcdefghijklmnopqrstuvwxyz"
+    VALIDATION_UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    VALIDATION_LETTERS = VALIDATION_LOWERCASE + VALIDATION_UPPERCASE
+    VALIDATION_DIGITS = "1234567890"
+    VALIDATION_ADVANCED_DIGITS = "1234567890.+-*/^<>[]{}()!|"
+    VALIDATION_PUNCTUATION = r"""!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
+    VALIDATION_WHITESPACE = " \t\n\r\v\f"
+    VALIDATION_REGULAR = None
+
+    def __init__(self, x, y, text="", font=default_font, color=BLACK):
+        """Initialize the Entry. Typically a widget will push events
+        automatically, but because there are custom named events, they have
+        to be defined here.
+
+        An Entry is a widget where text input can be returned. Typing into
+        an Entry appends some text, which can be used for usernames,
+        passwords, and more.
+        
+        x - x coordinate of the Entry
+        y - y coordinate of the Entry
+        text - default text of the Entry
+        font - font of the text in the Entry
+        color - color of the text in the Entry
+
+        properties:
+            document - document of the IncrementalTextLayout
+            layout - internal IncrementalTextLayout for efficient rendering
+            caret - caret of the Entry
+            image - image displayed to give the Entry a graphical look
+
+            x - x coordinate of the Entry
+            y - y coordinate of the Entry
+            default - default text of the Entry (changing this has no effect)
+            font - font of the Entry
+
+            blinking - caret is visible or not visible
+            index - index of the caret (position)
+            length - length of the text in the Entry
+            max - maximum amount of characters in the Entry
         """
 
-    def __init__(self, x, y, text="", font=DEFAULT_FONT, color=BLACK):
         self.document = decode_text(text)
         
         self.layout = IncrementalTextLayout(self.document, 190, 24)
 
-        self.caret = Caret(self.layout)
         self.image = Image(entry_normal, x, y)
+        self.caret = Caret(self.layout)
 
         Widget.__init__(self)
 
@@ -957,40 +1177,249 @@ class Entry(Widget):
         self.default = text
         self.font = font
 
-        self.blinking = True
-        self.index = 0
-        self.length = 0
-        self.select_all = True
-
         self.document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
                                               font_size=DEFAULT_FONT[1],
-                                              color=get_four_byte_color(color)))
+                                              color=four_byte(color)))
 
         self.window.push_handlers(
             self.on_text,
             self.on_text_motion
         )
 
-    def blink(self, delta_time):
+    def _get_text(self):
+        """Return the text of the Entry.
+        
+        returns: str
+        """
+
+        return self.document.text
+
+    def _set_text(self, text):
+        """Set the text of the Entry.
+        
+        text - new text to be displayed. This can be a string or a tuple
+        change_index - index is changed after text input. If True, the index
+                       is set to the end of the Entry.
+        
+        parameters: str or tuple
+        """
+
+        if isinstance(text, Tuple):
+            self.document.text = text[0]
+
+            if text[1]:
+                # Put the caret to the end
+                self.index = self.length
+
+            return
+        
+        self.document.text = text
+
+    def _get_index(self):
+        """Return the index of the current caret position within the
+        document.
+        
+        returns: int
+        """
+
+        return self.caret.position
+    
+    def _set_index(self, index):
+        """Set the index of the current caret position within the document.
+        
+        index - new index of the caret position
+        
+        parameters: int
+        """
+
+        self.caret.position = index
+    
+    def _get_selection(self):
+        """Get the selection indices of the Entry, with the start and end as
+        a tuple.
+        
+        (start, end)
+
+        returns: tuple (int, int), (start, end)
+        """
+
+        return (
+                self.layout.selection_start,
+                self.layout.selection_end,
+                self.text[
+                    self.layout.selection_start : self.layout.selection_end
+                ]
+               )
+    
+    def _set_selection(self, selection):
+        """Set the selection indices of the Entry, which are defined with
+        the property layout_colors.
+        
+        selection - tuple of selection indices (start, end)
+        
+        parameters: tuple
+        """
+
+        self.caret.mark = selection[1]
+
+        self.layout.selection_start = selection[0]
+        self.layout.selection_end = selection[1]
+        
+    def _get_layout_colors(self):
+        """Get the layout colors of the Entry. This will return a tuple of
+        three colors defined by _set_layout_color. The selection background
+        defaults to (46, 106, 197).
+
+        (selection, caret, text)
+
+        returns: tuple (list, list, list)
+        """
+
+        return (
+                self.layout.selection_background_color,
+                self.caret.color,
+                self.layout.selection_color
+                )
+
+    def _set_layout_colors(self, colors):
+        """Set the layout colors of the Entry.
+        
+        colors - tuple of three colors. The first item is the background
+                color of the selection, while the second item is the caret
+                color. The third item is the color of the text selected.
+        
+        parameters: tuple (selection, caret, text)
+        """
+
+        self.layout.selection_background_color = colors[0]
+        self.layout.selection_color = colors[2]
+        self.caret.color = colors[1]
+    
+    def _get_validate(self):
+        """Get the validation of the Entry.
+        
+        returns: str
+        """
+
+        return self._validate
+    
+    def _set_validate(self, validate):
+        """Set the validation of the Entry. This is a string containing all
+        of the characters the user is able to type. Common charsets cam be
+        found in the string module.
+        
+        validate - validation to set
+        
+        parameters: str
+        """
+
+        self._validate = validate
+    
+    def _get_view(self):
+        """Get the view vector of the Entry.
+        
+        returns: tuple (x, y)
+        """
+        
+        return (
+                self.layout.view_x,
+                self.layout.view_y
+        )
+    
+    def _set_view(self, view):
+        """Set the view of the Entry as a vector.
+        
+        view - vector of x and y views as a Point
+        
+        parameters: Point
+        """
+
+        self.layout.begin_update()
+
+        self.layout.view_x = view.x
+        self.layout.view_y = view.y
+
+        self.layout.end_update()
+
+    text = property(_get_text, _set_text)
+    index = property(_get_index, _set_index)
+    selection = property(_get_selection, _set_selection)
+    layout_colors = property(_get_layout_colors, _set_layout_colors)
+    validate = property(_get_validate, _set_validate)
+    view = property(_get_view, _set_view)
+
+    def blink(self, delta):
+        """The caret toggles between white and black colors. This is called
+        every 0.5 seconds, and only when the caret has focus.
+        
+        delta - delta time in seconds since the function was last called.
+                This varies about 0.5 seconds give or take, because of
+                calling delay, lags, and other inefficiencies.
+        
+        parameters: float
+        """
+
         if self.caret.color == list(BLACK):
             self.caret.color = WHITE
         else:
             self.caret.color = BLACK
             
-    def get(self):
-        return self.document.text
+    def insert(self, index, text, change_index=True):
+        """Insert some text at a given index one character after the index.
 
-    def set(self, text):
-        self.document.text = text
-        self.index = len(text)
+        >>> entry.text = "Hello!"
+        >>> entry.insert(6, " world")
+        >>> entry.text
+        "Hello world!"
+
+        "Hello world!"
+              ^^^^^^
+              678...
+
+        index - index of the text addition
+        text - text to be added
+        change_index - index is updated to the end of the addition
         
-    def insert(self, index, text):
-        self.document.text = insert(index, self.document.text, text)
+        parameters: int, str
+        """
+
+        # self.text = insert(index, self.text, text)
+
+        self.document.insert_text(index, text)
+
+        if change_index:
+            self.index = self.index + len(text)
 
     def delete(self, start, end):
-        self.document.text = delete(start, end, self.document.text)
+        """Delete some text at a start and end index, one character after the
+        start position and a character after the end position
 
+        >>> entry.text = "Hello world!"
+        >>> entry.delete(5, 10)
+        >>> entry.text
+        "Hello!"
+
+        "Hello world!"
+              ^^^^^^
+              6... 11
+        
+        start - start of the text to be deleted
+        end - end of the text to be deleted
+        
+        parameters: int, int
+        """
+
+        # self.text = delete(start, end, self.text)
+
+        self.document.delete_text(start, end)
+    
     def draw(self):
+        """Draw the Entry. The layout is drawn with pyglet rendering.
+        
+        1. Image component
+        2. Layout
+        """
+
         self.image.draw()
         
         self.image.x = self.x
@@ -1000,7 +1429,7 @@ class Entry(Widget):
 
         try:
             self.layout.x = self.x - self.layout.width / 2 + 1
-            self.layout.y = self.y - 2
+            self.layout.y = self.y - 5
         
             self.layout.anchor_x = LEFT
             self.layout.anchor_y = CENTER
@@ -1014,27 +1443,84 @@ class Entry(Widget):
         self.component = self.image
 
     def on_key(self, keys, modifiers):
-        if keys == A and modifiers & CONTROL:
-            self.caret.position = 0
-            self.caret.mark = self.length
-            self.caret._update()
+        """A key is pressed. This is used for keyboard shortcuts.
+        
+        keys - key pressed (32-bit) int defined in keyboard
+        modifiers - modifier pressed (32-bit) int defined in keyboard
+        
+        parameters: int (32-bit), int (32-bit)
+        """
+        
+        if keys == SPACE:
+            self.undo_stack.append(self.text)
 
-            self.select_all = True
-
+        if modifiers & CONTROL:
+            if keys == V:
+                self.insert(self.index, clipboard_get(), change_index=True)
+            elif keys == C:
+                clipboard_append(self.selection[2])
+            if keys == X:
+                clipboard_append(self.selection[2])
+                self.caret._delete_selection()
+            elif keys == A:
+                self.index = 0
+                self.selection = (0, self.length, self.text)
+            
     def on_focus(self):
-        if self.get() == self.default:
-            self.set("")
+        """The Entry has focus, activating events. This activates the caret
+        and stops a few errors.
+        """
+
+        if self.text == self.default:
+            self.text = ""
             self.index = 0
             
     def on_text(self, text):
-        if self.focus:
-            self.caret.on_text(text)
-            
-            self.index = self.caret.position
+        """The Entry has text input. The Entry adds text to the end.
+        Internally, the Entry does a few things:
+        
+            - Remove all selected text
+            - Update the caret position
+            - Appends text to the end of the layout
+        
+        text - text inputed by the user
 
-            self.select_all = False
+        parameters: str
+        """
+
+        if self.focus and \
+            self.length < self.max:
+            if self.validate:
+                if text in self.validate:
+                    self.caret.on_text(text)
+
+                    return
             
+            self.caret.on_text(text)
+        
     def on_text_motion(self, motion):
+        """The Entry has caret motion. This can be moving the caret's
+        position to the left with the Left key, deleting a character
+        previous with the Backspace key, and more.
+        
+        motion - motion used by the user. This can be one of many motions,
+                 defined by keyboard constants found in the keyboard module.
+
+                 MOTION_LEFT                MOTION_RIGHT
+                 MOTION_UP                  MOTION_DOWN                
+                 MOTION_NEXT_WORD           MOTION_PREVIOUS_WORD
+                 MOTION_BEGINNING_OF_LINE   MOTION_END_OF_LINE
+                 MOTION_NEXT_PAGE           MOTION_PREVIOUS_PAGE
+                 MOTION_BEGINNING_OF_FILE   MOTION_END_OF_FILE
+                 MOTION_BACKSPACE           MOTION_DELETE
+                 MOTION_COPY                MOTION_PASTE
+
+                 You can get the list of all text motions with
+                 motions_string() in the keyboard module.
+                 
+        parameters: int (32-bit)
+        """
+
         if self.focus:
             try:
                 self.caret.on_text_motion(motion)
@@ -1044,44 +1530,93 @@ class Entry(Widget):
             self.index = self.caret.position
 
     def on_text_select(self, motion):
+        """Some text in the Entry is selected. When this happens, the
+        selected text will have a blue background to it. Moving the caret
+        with a text motion removes the selection (does not remove the text).
+
+        NOTE: this is not called with caret mouse selections. See on_press.
+        
+        motion - motion used by the user. These can be made with the user.
+
+                 SHIFT + LEFT               SHIFT + RIGHT
+                 SHIFT + UP                 SHIFT + DOWN
+                 CONTROL + SHIFT + LEFT     CONTROL + SHIFT + RIGHT
+        
+        parameters: int (32-bit)
+        """
+
         if self.focus:
             self.caret.on_text_motion_select(motion)
 
             self.index = self.caret.position
 
     def on_press(self, x, y, buttons, modifiers):
-        self.caret.on_mouse_press(x, y, button, modifiers)
+        """The Entry is pressed. This will do a number of things.
+            
+            - The caret's position is set to the nearest character.
+            - If text is selected, the selection will be removed.
+            - If the Shift key is being held, a selection will be created
+              between the current caret index and the closest character to
+              the mouse.
+            - If two clicks are made within 0.5 seconds (double-click), the
+              current word is selected.
+            - If three clicks are made within 0.5 seconds (triple-click), the
+              current paragraph is selected.
+        
+        x - x coordinate of the press
+        y - y coordinate of the press
+        buttons - buttons that were pressed with the mouse
+        modifiers - modifiers being held down
 
-        self.index = self.caret.position
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+
+        _x, _y = x - self.layout.x, y - self.layout.y
+        
+        self.caret.on_mouse_press(_x, _y, buttons, modifiers)
 
     def on_drag(self, x, y, dx, dy, buttons, modifiers):
+        """The user dragged the mouse when it was pressed. This can
+        create selections.
+        
+        x - x coordinate of the current position
+        y - y coordinate of the current position
+        dx - movement in x vector from the last position
+        dy - movement in y vector from the last position
+        
+        buttons - buttons that were dragged with the mouse
+        modifiers - modifiers being held down
+        
+        parameters: int, int, float, float, int (32-bit), int (32-bit)
+        """
+
+        _x, _y = x - self.layout.x, y - self.layout.y
+
         if self.press:
-            self.caret.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
+            self.caret.on_mouse_drag(_x, _y, dx, dy, buttons, modifiers)
 
             self.index = self.caret.position
         else:
             if self.focus:
-                self.caret.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
+                self.caret.on_mouse_drag(_x, _y, dx, dy, buttons, modifiers)
 
                 self.index = self.caret.position
         
     def update(self):
-        self.caret.position = self.index
+        """Update the caret and Entry. This schedules caret blinking and
+        keeps track of focus.
+        """
 
-        self.length = len(self.get())
+        self.length = len(self.text)
         
         if self.focus:
-            self.caret.visible = True
-            
             if not self.blinking:
                 schedule(self.blink, ENTRY_BLINK_INTERVAL)
 
                 self.blinking = True
             
         else:
-            self.caret.visible = False
-            self.caret.mark = 0
-            self.caret.position = 0
+            self.index = 0
             self.blinking = False
 
             unschedule(self.blink)
@@ -1349,6 +1884,7 @@ class MyWindow(Window):
         Window.__init__(
             self, width, height, title, style=Window.WINDOW_STYLE_DIALOG
         )
+
         from file import blank1, blank2
         from pyglet.image import load
 
@@ -1392,7 +1928,7 @@ class MyWindow(Window):
             100, 
             150,
             50,
-            segments=5,
+            segments=100,
             color=BLUE_YONDER)
         
         self.container.append(self.label)
@@ -1402,13 +1938,13 @@ class MyWindow(Window):
         self.container.append(self.slider)
         self.container.append(self.entry)
         self.container.append(self.circle)
-        
+
         self.button.bind(ENTER)
 
         self.background_color = WHITE
 
     def click(self):
-        self._label.text = self.entry.get()
+        self._label.text = self.entry.text
 
     def on_draw(self):
         self.clear()
@@ -1424,4 +1960,6 @@ class MyWindow(Window):
 
 if __name__ == "__main__":
     window = MyWindow(" ", 500, 400)
-    run()
+    
+    from pyglet.app import run
+    run(1/120)
