@@ -2,14 +2,14 @@
 https://github.com/eschan145/Armies/blob/main/README.md"""
 
 
+from arcade import create_rectangle_filled, draw_rectangle_outline, \
+    enable_timings, get_fps, get_window, \
+    load_texture, run, schedule, unschedule
+from arcade import Sprite, SpriteList, Text, Window
+from cmath import tau
 from string import printable
 from tkinter import Tk
 from typing import Tuple
-from arcade import create_rectangle_filled, draw_rectangle_outline, \
-    enable_timings, get_fps, get_window, \
-    load_texture, run, schedule, set_window, unschedule
-from arcade import Sprite, SpriteList, Text, Window
-from cmath import tau
 
 from color import BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, GRAY, GRAY_BLUE, RED, WHITE
 from color import four_byte, scale_color
@@ -28,6 +28,7 @@ from pyglet.text.caret import Caret
 from pyglet.text.layout import IncrementalTextLayout
 from pyglet.shapes import BorderedRectangle, Circle, Ellipse, Line, Triangle, Sector, Star, Polygon, Arc
 
+from webbrowser import open_new_tab
 
 MAX = 2 ** 32
 
@@ -452,7 +453,7 @@ class Image(Widget):
 
 
 class Label(Widget):
-    """Label widget to draw and display HTML text"""
+    """Label widget to draw and display HTML text."""
     
     def __init__(self, text, x, y, frame=None,
                  colors=[BLACK, (COOL_BLACK, DARK_SLATE_GRAY, DARK_GRAY)],
@@ -635,7 +636,8 @@ class Button(Widget):
     """
     
     def __init__(
-                 self, text, x, y, command=None, parameters=[], 
+                 self, text, x, y, command=None, parameters=[],
+                 link=None,
                  colors=["yellow", BLACK], font=default_font,
                  callback=SINGLE
                 ):
@@ -650,6 +652,7 @@ class Button(Widget):
         y - y coordinate of the Button
         command - command to be invoked when the Button is called
         parameters - parameters of the callable when invoked
+        link - website link to go to when invoked
         colors - colors of the Button
         font - font of the Button
         callback - how the Button is invoked:
@@ -674,6 +677,7 @@ class Button(Widget):
         self.y = y
         self.command = command
         self.parameters = parameters
+        self.link = link
         self.colors = colors
         self.font = font
         self.callback = callback
@@ -733,6 +737,10 @@ class Button(Widget):
             self.command(self.parameters)
         else:
             self.command()
+        
+        if self.link:
+            open_new_tab(self.link)
+        
 
     def draw(self):
         """Draw the Button. The component of the Button is the image, which takes
@@ -818,7 +826,12 @@ class Button(Widget):
 
 
 class Slider(Widget):
-    """Slider widget to display slidable values."""
+    """Slider widget to display slidable values.
+    
+    FIXME: add keyboard functionality
+    
+    https://github.com/eschan145/Armies/issues/20
+    """
 
     _value = 0
     destination = 0
@@ -945,6 +958,9 @@ class Slider(Widget):
         parameters: int (32-bit), int (32-bit)
         """
 
+        if not self.focus:
+            return
+        
         if keys == KEY_RIGHT:
             self.knob.x = self.knob.x + (int(self.length / self.size))
             self.reposition_knob()
@@ -1339,6 +1355,8 @@ class Entry(Widget):
     5. Enable updates for the layout for smoother performance. This raises
        AssertionError, one that has been seen before.
           
+    https://github.com/eschan145/Armies/issues/11
+
     Last updated: August 4th 2022
     """
 
@@ -2331,7 +2349,8 @@ class MyWindow(Window):
             "Click me!",
             250,
             250,
-            command=self.click)
+            command=self.click,
+            link="chrome://dino")
 
         self.toggle = Toggle(
             "Show fps",
@@ -2383,6 +2402,6 @@ class MyWindow(Window):
 
 if __name__ == "__main__":
     window = MyWindow(" ", 500, 400)
-    
+
     from pyglet.app import run
     run(1/120)
