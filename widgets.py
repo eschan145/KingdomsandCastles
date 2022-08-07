@@ -935,7 +935,7 @@ class Slider(Widget):
     def on_key(self, keys, modifiers):
         """A key is pressed. This is used for keyboard shortcuts when the Slider
         has focus. On a right key press, the value is incremented by one. On a
-        left key press, the value is deincremented by one.
+        left key press, the value is decremented by one.
         
         Unfortunately, this is not working currently.
 
