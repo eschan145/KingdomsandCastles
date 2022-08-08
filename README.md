@@ -1,5 +1,5 @@
 # Armies
-An advanced battlefield simulator.
+An advanced battlefield simulator. If you are new to this respository, please note that the development information is needing updates. Do not refer to this for documentation. Use the source code instead.
 
 In this game, you command an army of soldiers. They can be of the following types:
 
