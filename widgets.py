@@ -8,7 +8,6 @@ code of each widget.
 
 from cmath import tau
 from string import printable
-from time import time
 from tkinter import Tk
 from typing import Tuple
 from webbrowser import open_new
@@ -26,7 +25,7 @@ from pyglet.text.caret import Caret
 from pyglet.text.layout import IncrementalTextLayout
 from pymunk import shapes
 
-from color import (BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY,
+from color import (BLACK, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY,
                    RED, WHITE, four_byte)
 from constants import (BOTTOM, CENTER, DEFAULT_FONT, DEFAULT_FONT_FAMILY,
                        DEFAULT_FONT_SIZE, DISABLE_ALPHA, DOUBLE, ENTRY_BLINK_INTERVAL,
@@ -36,7 +35,7 @@ from file import (combobox_bottom_normal, combobox_middle_normal,
                   combobox_top_normal, entry_normal, knob, none,
                   slider_horizontal, toggle_false, toggle_false_hover,
                   toggle_true, toggle_true_hover, widgets)
-from geometry import Point, Pointlist
+from geometry import Point
 from key import (CONTROL, ENTER, KEY_LEFT, KEY_RIGHT, MOTION_BACKSPACE,
                  MOTION_BEGINNING_OF_FILE, MOTION_BEGINNING_OF_LINE,
                  MOTION_COPY, MOTION_DELETE, MOTION_DOWN, MOTION_END_OF_FILE,
@@ -108,7 +107,14 @@ def delete(start, end, text):
 
 
 class WidgetsError(Exception):
-    """Widgets error"""
+    """Widgets error. When creating custom widgets, this can be invoked. Only
+    use this if you need to, like if it is going to cause something to hang or
+    crash, or it raises an unhelpful error. Making this unnecessary will be
+    annoying in some scenarios. If the user absolutely wants to do something
+    and this error keeps on being raised, this is aggravating and he will have
+    to edit the source code.
+    """
+
 
 class Font:
     """An object-oriented Font."""
@@ -354,6 +360,23 @@ class Widget(Sprite, EventDispatcher):
     with the key property. You can draw the hit box of a widget for debugging,
     and performance is not lost because the drawing is cached. When removing a
     widget, use its delete function.
+
+    TODO: of course, there are many enhancements and other things that need to
+          be worked on for the built-in widgets. If you would like to work on
+          these post your enhancements in the discussions.
+
+          https://github.com/eschan145/Armies/discussions/1
+    
+        1. Adding left, right, top, and bottom properties to widgets. This has
+           been implemented in arcade sprites and should be for this too. It
+           can be useful for enhanced positioning.
+           - Create an _set_coords() function that is called whenever border
+             coordinate properties are modified
+           - Add setting properties for each widget. This is not recommended
+             because it's a hassle to code and will take up more space.
+           - Make functions like set_border_coords
+        
+        2. Move documentation from setters to getters for properties
     """
 
     def __init__(self, widgets=(), image=none, scale=1.0, frame=None):
@@ -617,13 +640,10 @@ class Widget(Sprite, EventDispatcher):
     def on_text_motion_select(self, motion):
         self.dispatch_event("on_text_select", motion)
 
-    def on_update(self, delta_time):
+    def on_update(self, delta):
         self.frames += 1
 
         if self.component:
-            self.x = self.component.x
-            self.y = self.component.y
-
             self.width = self.component.width
             self.height = self.component.height
 
@@ -741,8 +761,6 @@ class Image(Widget):
 
 class Label(Widget):
     """Label widget to draw and display HTML text.
-
-    TODO: add to batch for fast drawing
     """
 
     UPDATE_RATE = 7
@@ -817,7 +835,7 @@ class Label(Widget):
 
         if not justify in (LEFT, CENTER, RIGHT):
             raise WidgetsError(f"Invalid label justification \"{justify}\""
-                               "Must be \"left\", \"center\", or \"right\".")
+                                "Must be \"left\", \"center\", or \"right\".")
 
         if multiline and not width:
             raise WidgetsError(f"When the parameter \"multiline\" is set to "
@@ -1082,19 +1100,7 @@ class Label(Widget):
         fps drops below 60.
         """
 
-        # self.label.begin_update()
-
-        # self.label.font_name = self.font[0]
-        # self.label.font_size = self.font[1]
-        # self.label.opacity = self.alpha
-        # self.label.align = self.justify
-        # self.label.multiline = self.multiline
-
-        # self.label.end_update()
-
         self.length = len(self.text)
-
-        self.label._update_enabled = not self.label._update_enabled
 
         if "<u" in self.text or "<\\u>" in self.text:
             # ValueError: Can only assign sequence of same size
@@ -1188,6 +1194,23 @@ class Button(Widget):
         self.press_image = load_texture(widgets[f"{colors[0]}_button_press"])
         self.disable_image = load_texture(widgets[f"{colors[0]}_button_disable"])
 
+    def _get_text(self):
+        """Get the text of the button.
+        
+        returns: str
+        """
+
+        return self.label.text
+    
+    def _set_text(self, text):
+        """Set the text of the button. Unlike a label, the text is not forced,
+        so it may not be the most updated.
+        
+        parameters: str
+        """
+
+        self.label.text = text
+
     def _get_x(self):
         """Get the x position of the button.
 
@@ -1224,6 +1247,7 @@ class Button(Widget):
 
         self.image.y = self.label.y = y
 
+    text = property(_get_text, _set_text)
     x = property(_get_x, _set_x)
     y = property(_get_y, _set_y)
 
@@ -1296,15 +1320,15 @@ class Button(Widget):
 
         if not self.label.colors[0] == self.colors[1] or \
             not self.label.font == self.font or \
-            not self.label.label.anchor_x == CENTER:
+            not self.label.x == self.x - self.label.label.content_width / 2:
             self.label.colors[0] = self.colors[1]
             self.label.font = self.font
-            self.label.label.anchor_x = CENTER
+            self.label.x = self.x - self.label.label.content_width / 2
 
         self.component = self.image
 
     def on_press(self, x, y, buttons, modifiers):
-        """The Button is pressed. This invokes its command if the mouse button
+        """The button is pressed. This invokes its command if the mouse button
         is the left one.
 
         TODO: add specifying proper mouse button in settings
@@ -1456,9 +1480,9 @@ class Slider(Widget):
         return self.bar.x
 
     def _set_x(self, x):
-        """Set the x position of the Slider.
+        """Set the x position of the slider.
 
-        x - new x position of the Slider
+        x - new x position of the slider
 
         parameters: int
         """
@@ -1467,7 +1491,7 @@ class Slider(Widget):
         self.label.x = self.bar.left - self.padding
 
     def _get_y(self):
-        """Get the y position of the Slider.
+        """Get the y position of the slider.
 
         returns: int
         """
@@ -1475,9 +1499,9 @@ class Slider(Widget):
         return self.bar.y
 
     def _set_y(self, y):
-        """Set the y position of the Slider.
+        """Set the y position of the slider.
 
-        y - new y position of the Slider
+        y - new y position of the slider
 
         parameters: int
         """
@@ -3787,3 +3811,4 @@ if __name__ == "__main__":
 
     from pyglet.app import run
     run(1/20000)
+
