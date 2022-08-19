@@ -1,291 +1,139 @@
-"""Contains variables used throughout the battlefield (Pun not intended)"""
-
 import os
 import sys
-from math import atan2, cos, sin
-from random import choice, randint
 
-from arcade import load_texture
-from pymunk import ShapeFilter
+from arcade import SpriteList, Window, close_window, get_fps, run
+from pymunk import Space
 
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 
 sys.path.append(parent)
 
-from color import RED
-from constants import (ARROW_ACCURACY, ARROW_MAXIMUM_ARCHER_SPEED,
-                       ARROW_MAXIMUM_SPEED, ARROW_MINIMUM_SPEED, ENEMY, MELEE,
-                       MELEE_RANGE, MELEE_RANGE_CHANCE, PLAYER, RANGE,
-                       SOLDIER_MELEE_REACH)
-from file import projectile, soldier
-from geometry import Point, chance, get_closest
-from sprite import PhysicsObject
+from color import GRASS
+from constants import *
+from key import Q
+from widgets import Container, Label
 
+from units import Unit
 
-class Arrow(PhysicsObject):
 
-    def __init__(self, shooter, target):
+class Battlefield(Window):
 
-        """Initiate arrows.
+    def __init__(self):
+        Window.__init__(self, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE,
+                        resizable=True, style=Window.WINDOW_STYLE_DIALOG)
 
-        Arrows start with a speed of zero, then speed up as they make their way to
-        their target. They evantually slow down as a result of drag.
-        """
+        self.player_list = SpriteList()
+        self.enemy_list = SpriteList()
+        self.projectile_list = SpriteList()
+        self.dead_list = SpriteList(use_spatial_hash=True)
 
-        PhysicsObject.__init__(
-            self, projectile["arrow"], 0.8, mass=0.13, type=2)
+        self.units = []
+        self.images = SpriteList(use_spatial_hash=True)
 
-        self.x = shooter.x
-        self.y = shooter.y
+        self.space = Space()
 
-        self.rot_speed = 2**32
+        self.player_unit = Unit(player_formation, PLAYER, self.width / 2, 200)
+        self.enemy_unit = Unit(enemy_formation, ENEMY, self.width / 2, 500)
 
-        self.shooter = shooter
-        self.target = target
+        self.current_unit = self.player_unit
 
-        self.accuracy = 0
-        self.speed = randint(ARROW_MINIMUM_SPEED, ARROW_MAXIMUM_SPEED)
+        self.container = Container()
 
-        self.shooter.arrows -= 1
+        self.fps = Label("", 50, 50, command=close_window)
 
-        self.collision_type = 2
+        # self.unit_frame = Frame(self.width - UNIT_FRAME_WIDTH / 2, self.height,
+        #                         UNIT_FRAME_WIDTH, UNIT_FRAME_HEIGHT, TOP)
+        # self.unit_frame.top = 0
 
-        self.accuracy_x = randint(-ARROW_ACCURACY, ARROW_ACCURACY)
-        self.accuracy_y = randint(-ARROW_ACCURACY, ARROW_ACCURACY)
+        self.unit_organize_volley = Label("Organize volley", 10, 40,
+                                          command=self.command, parameters=["volley"])
 
-        if self.shooter.archer:
-            self.speed = ARROW_MAXIMUM_ARCHER_SPEED
+        self.container.append(self.fps)
+        self.container.append(self.unit_organize_volley)
 
-            self.accuracy_x = randint(
-                int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
-            self.accuracy_y = randint(
-                int(-ARROW_ACCURACY / 2), int(ARROW_ACCURACY / 2))
+        self.arrow_soldier_collisions = self.space.add_collision_handler(1, 2)
 
-        self.point = Point(self.target.x + self.accuracy_x,
-                           self.target.y + self.accuracy_y)
+        self.unit_organize_volley.bind(Q)
+        self.background_color = GRASS
+        self.frames = 0
 
-        if self.shooter.allegiance == PLAYER:
-            self.shape.filter = ShapeFilter(categories=0b0010, mask=0b1101)
+    def command(self, attack):
+        if attack == "volley":
+            self.current_unit.on_volley()
 
-        if self.shooter.allegiance == ENEMY:
-           self.shape.filter = ShapeFilter(categories=0b0001, mask=0b1110)
+    def on_arrow_soldier_collision(self, arbiter, space, data):
+        # print(arbiter.shapes)
+        # print(arbiter.shapes[1].object)
 
-        self.destination_point = self.point.x, self.point.y
+        soldier = arbiter.shapes[0].object
+        arrow = arbiter.shapes[1].object
 
-        self.window.projectile_list.append(self)
+        if arrow.shooter.allegiance == PLAYER and \
+                soldier.allegiance == ENEMY:
 
-    def update(self):
-        PhysicsObject.update(self)
+            damage = abs(max(arrow.force)) / ARROW_DAMAGE_LOSS
+            if not damage:
+                damage = 1  # Even slow arrows cause damage
 
-        if self.speed > 5:
-            self.speed -= 5
+            soldier.wound(damage * ARROW_DAMAGE)
 
-        dest_x = self.point.x
-        dest_y = self.point.y
+            # if soldier.health:
+            #     arrow = PhysicsObject(
+            #         projectile["arrow"],
+            #         0.7
+            #     )
 
-        x_diff = dest_x - self.shooter.x
-        y_diff = dest_y - self.shooter.y
-        angle = atan2(y_diff, x_diff)
+            #     arrow.x, arrow.y = self.x, self.y
+            #     arrow.angle = self.angle
 
-        force = [cos(angle), sin(angle)]
+            arrow.remove()
 
-        # Taking into account the angle, calculate our force.
-        force[0] *= self.speed
-        force[1] *= self.speed
+        if arrow.shooter.allegiance == ENEMY and \
+                soldier.allegiance == PLAYER:
+            damage = abs(max(arrow.force)) / ARROW_DAMAGE_LOSS
+            if not damage:
+                damage = 1  # Even slow arrows cause damage
 
-        self.force = force
+            soldier.wound(damage * ARROW_DAMAGE)
 
-        # arrow_player_collision = check_for_collision_with_list(self, self.window.player_list)
-        # arrow_enemy_collision = check_for_collision_with_list(self, self.window.enemy_list)
+            arrow.remove()
 
-        # for soldier in self.collisions:
-        #     if self.shooter.allegiance == ENEMY:
-        #         damage = abs(max(self.force)) / ARROW_DAMAGE_LOSS
-        #         if not damage:
-        #             damage = 1 # Even slow arrows cause damage
+        return True
 
-        #         soldier.wound(damage * ARROW_DAMAGE)
+    def on_draw(self):
+        self.clear()
 
-        #         if soldier.health:
-        #             arrow = PhysicsObject(
-        #                 projectile["arrow"],
-        #                 0.7
-        #             )
+        self.arrow_soldier_collisions.pre_solve = self.on_arrow_soldier_collision
 
-        #             arrow.x, arrow.y = self.x, self.y
-        #             arrow.angle = self.angle
+        # for image in self.images:
+        #     create_image(*image)
 
-        #             self.remove()
+        self.player_list.draw()
+        self.enemy_list.draw()
+        self.projectile_list.draw()
+        self.dead_list.draw()
+        # print(len(self.player_list) + len(self.enemy_list))
+        self.fps.text = f"{int(get_fps())} fps"
 
-        # for soldier in arrow_enemy_collision:
-        #     if self.shooter.allegiance == PLAYER:
-        #         damage = abs(max(self.force))
-        #         if not damage:
-        #             damage = 1 # Even slow arrows cause damage
+        self.container.draw()
 
-        #         soldier.wound(damage * ARROW_DAMAGE)
+        for unit in self.units:
+            unit.draw()
 
-        #         # print(damage, ARROW_DAMAGE)
+    def on_update(self, delta):
+        self.player_list.update()
+        self.enemy_list.update()
+        self.projectile_list.update()
 
-        #         # print(self.force)
-        #         if soldier.health:
-        #             arrow = PhysicsObject(
-        #                 projectile["arrow"],
-        #                 0.7
-        #             )
+        self.space.step(1 / 60.0)
 
-        #             arrow.x, arrow.y = self.x, self.y
-        #             arrow.angle = self.angle
+        # for sprite in self.player_list:
+        #     check_for_collision_with_list(sprite, self.enemy_list)
 
-        #             self.remove()
 
-        if self.bottom > self.window.height or \
-            self.top < 0 or \
-            self.left > self.window.width or \
-            self.right < 0:
-            self.remove()
+if __name__ == "__main__":
+    battlefield = Battlefield()
 
-
-class Soldier(PhysicsObject):
-    _health = 100
-
-    def __init__(self, allegiance, rivals,
-                 light_infantry=False, heavy_infantry=False, archer=False):
-
-        """Initiate soldiers.
-        
-        **Soldiers have allegiance to either the player or the enemy. A rivals
-        parameter specifies its enemy side, referenced in a SpriteList.
-        They can be of multiple types:
-            * Light infantry        - Ordinary foot soldiers
-            * Heavy infantry        - Heavily armored but slower foot soldiers
-            * Archer                - Soldiers that can fire arrows at enemy
-
-        allegiance - allegiance of the soldier
-        rivals - rivals of the soldier
-        light_infantry - soldier is light infantry
-        heavy_infantry - soldier is heavy infantry
-        archer - soldier is an archer
-        """
-
-        if allegiance == PLAYER:
-            image = soldier["player_light_infantry"]
-        else:
-            image = soldier["enemy_light_infantry"]
-
-        PhysicsObject.__init__(self, image, 0.5, mass=145, type=1)
-
-        self.allegiance = allegiance
-        self.rivals = rivals
-
-        self.light_infantry = light_infantry
-        self.heavy_infantry = heavy_infantry
-        self.archer = archer
-
-        self.hands = (None, "bow")
-
-        self.arrows = 24
-        self.strength = randint(70, 100)
-
-        self.target = None
-        self.health = 100
-
-        self.mass = 10
-
-        self.moving_up = False
-        self.moving_down = False
-
-        self.angle = 90
-
-        if self.archer:
-            self.arrows = 50
-
-        self.weapon = RANGE
-
-        self.collision_type = 1
-
-        if self.allegiance == PLAYER:
-            self.shape.filter = ShapeFilter(categories=0b1000, mask=0b1101)
-            self.append_texture(load_texture(
-                soldier["player_light_infantry_dead"]))
-
-        else:
-            self.shape.filter = ShapeFilter(categories=0b0100, mask=0b1110)
-            self.append_texture(load_texture(
-                soldier["enemy_light_infantry_dead"]))
-
-    def wound(self, amount):
-        self.color = RED
-        self.health -= amount
-
-    def knockback(self, strength):
-        self.reverse(strength)
-
-        self.x += self.change_x
-        self.y += self.change_y
-
-    def on_attack(self):
-        distance = get_closest(self, self.rivals)
-
-        if chance(5):
-            self.strength -= 1
-
-        if distance[1] < randint(MELEE_RANGE - MELEE_RANGE_CHANCE,
-                                 MELEE_RANGE + MELEE_RANGE_CHANCE):
-            self.weapon = MELEE
-
-            if distance[1] < MELEE_RANGE:
-                distance[0].wound(self.strength / 10)
-
-        else:
-            self.weapon = RANGE
-
-            if self.arrows:
-                arrow = Arrow(self, choice(self.rivals))
-
-    def on_melee(self):
-        distance = 2**32
-
-        if not self.target:
-            self.target, distance = get_closest(self, self.rivals)
-
-        # Thrust with sword
-        if distance < SOLDIER_MELEE_REACH:
-            self.target.wound(5)
-
-    def update(self):
-        PhysicsObject.update(self)
-
-        # if self.color != (255, 255, 255):
-        #     try:
-        #         self.color[1] += 1
-        #     except ValueError:
-        #         pass
-
-        if self.health <= 0:
-            self.set_texture(1)
-            self.health = 0
-
-            self.remove()
-            self.window.dead_list.append(self)
-
-            return
-
-        if self.moving_up:
-            self.force = (
-                0,  # cos(self.radians) * self.strength / 10,
-                sin(self.radians) * self.strength / 10
-            )
-        elif self.moving_down:
-            self.force = (
-                cos(self.radians) * self.strength / 10,
-                sin(self.radians) * -self.strength / 10
-            )
-
-        if chance(1000):
-            self.health += 1
-
-        if self.target:
-            if get_closest(self, self.rivals)[1] < MELEE_RANGE:
-                self.follow(self.target, rate=5, speed=1.5)
+    from pyglet.app import run
+    run(1/1200)
