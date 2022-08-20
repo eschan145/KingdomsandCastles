@@ -2,9 +2,10 @@
 https://github.com/eschan145/Armies/blob/main/README.md.
 
 More than meets the eye in this example. To see all features, look at the source
-code of each widget.
+code of each widget. This includes several different types of interactive
+widgets and displays an example at the end. It also includes API for creating
+your own widgets, which are quite easy to do.
 """
-
 
 from cmath import tau
 from string import printable
@@ -25,12 +26,13 @@ from pyglet.text.caret import Caret
 from pyglet.text.layout import IncrementalTextLayout
 from pymunk import shapes
 
-from color import (BLACK, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY,
-                   RED, WHITE, four_byte)
+from color import (BLACK, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, RED, WHITE,
+                   four_byte)
 from constants import (BOTTOM, CENTER, DEFAULT_FONT, DEFAULT_FONT_FAMILY,
-                       DEFAULT_FONT_SIZE, DISABLE_ALPHA, DOUBLE, ENTRY_BLINK_INTERVAL,
-                       KNOB_HOVER_SCALE, LEFT, MULTIPLE, RIGHT, SINGLE,
-                       SLIDER_VELOCITY, TOGGLE_FADE, TOGGLE_VELOCITY, TOP, Y)
+                       DEFAULT_FONT_SIZE, DISABLE_ALPHA, DOUBLE,
+                       ENTRY_BLINK_INTERVAL, KNOB_HOVER_SCALE, LEFT, MULTIPLE,
+                       RIGHT, SINGLE, SLIDER_VELOCITY, TOGGLE_FADE,
+                       TOGGLE_VELOCITY, TOP, Y)
 from file import (combobox_bottom_normal, combobox_middle_normal,
                   combobox_top_normal, entry_normal, knob, none,
                   slider_horizontal, toggle_false, toggle_false_hover,
@@ -128,7 +130,7 @@ class Font:
         feature developed on August 4th 2022 and has no effect.
 
         family - family of the font (style)
-        size - size of the font (not in pixels
+        size - size of the font (not in pixels)
 
         parameters: int, int
         """
@@ -361,12 +363,16 @@ class Widget(Sprite, EventDispatcher):
     and performance is not lost because the drawing is cached. When removing a
     widget, use its delete function.
 
+    There are dozens and dozens of properties for the widget. You can add an
+    arcade Shape to its ShapeElementList, in the shapes property. Key state
+    handlers are aleady built-in.
+
     TODO: of course, there are many enhancements and other things that need to
           be worked on for the built-in widgets. If you would like to work on
           these post your enhancements in the discussions.
 
           https://github.com/eschan145/Armies/discussions/1
-    
+
         1. Adding left, right, top, and bottom properties to widgets. This has
            been implemented in arcade sprites and should be for this too. It
            can be useful for enhanced positioning.
@@ -375,7 +381,7 @@ class Widget(Sprite, EventDispatcher):
            - Add setting properties for each widget. This is not recommended
              because it's a hassle to code and will take up more space.
            - Make functions like set_border_coords
-        
+
         2. Move documentation from setters to getters for properties
     """
 
@@ -427,6 +433,10 @@ class Widget(Sprite, EventDispatcher):
                 to a value different that one will mess up the widget's bbox
         frame - not yet implemented. This is supposed to have a frame widget,
                 which stores multiple widgets. It's similar to tkinter's Frame.
+
+        parameters:
+            widgets: tuple
+            image - str (filepath) or arcade Texture
         """
 
         Sprite.__init__(self, image, scale)
@@ -567,6 +577,14 @@ class Widget(Sprite, EventDispatcher):
         self.remove_from_sprite_lists()
 
     def on_key_press(self, keys, modifiers):
+        """The user pressed a key(s) on the keyboard.
+
+        keys - key pressed by the user. In pyglet, this can be called symbol.
+        modifiers - modifiers held down during the key press.
+
+        parameters: int (32-bit), int (32-bit)
+        """
+
         if self.disable:
             return
 
@@ -576,6 +594,14 @@ class Widget(Sprite, EventDispatcher):
             self.dispatch_event("on_focus")
 
     def on_key_release(self, keys, modifiers):
+        """The user released a key(s) on the keyboard.
+
+        keys - key released by the user. In pyglet, this can be called symbol.
+        modifiers - modifiers held down during the key press.
+
+        parameters: int (32-bit), int (32-bit)
+        """
+
         if self.disable:
             return
 
@@ -584,6 +610,16 @@ class Widget(Sprite, EventDispatcher):
         self.dispatch_event("on_lift", keys, modifiers)
 
     def on_mouse_motion(self, x, y, dx, dy):
+        """The user moved the mouse.
+
+        x - x position of mouse
+        y - y position of mouse
+        dx - x vector in last position from mouse
+        dy - y vector in last position from mouse
+
+        parameters: int, int, int, int
+        """
+
         if self.disable:
             return
 
@@ -595,6 +631,16 @@ class Widget(Sprite, EventDispatcher):
             self.hover = False
 
     def on_mouse_press(self, x, y, buttons, modifiers):
+        """The user pressed a mouse button.
+
+        x - x position of press
+        y - y position of press
+        buttons - buttons defined in keyboard pressed
+        modifiers - modifiers held down during the press
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+
         if self.disable:
             return
 
@@ -606,6 +652,16 @@ class Widget(Sprite, EventDispatcher):
             self.dispatch_event("on_focus")
 
     def on_mouse_release(self, x, y, buttons, modifiers):
+        """The user released a mouse button.
+
+        x - x position of press
+        y - y position of press
+        buttons - buttons defined in keyboard released
+        modifiers - modifiers held down during the release
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+
         if self.disable:
             return
 
@@ -619,6 +675,18 @@ class Widget(Sprite, EventDispatcher):
         self.dispatch_event("on_release", x, y, buttons, modifiers)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        """The user dragged the mouse.
+        
+        x - x position of mouse during drag
+        y - y position of mouse during drag
+        dx - movement of mouse in vector from last position
+        dy - movement of mouse in vector from last position
+        buttons - buttons defined in keyboard during drag
+        modifiers - modifiers held down during the during drag
+
+        parameters: int, int, int, int, int (32-bit), int (32-bit)
+        """
+
         if self.disable:
             return
 
@@ -628,6 +696,16 @@ class Widget(Sprite, EventDispatcher):
             self.dispatch_event("on_drag", x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_scroll(self, x, y, sx, sy):
+        """The user scrolled the mouse.
+        
+        x - x position of mouse during drag
+        y - y position of mouse during drag
+        scroll - scroll vector (positive being the mouse wheel up, negative the
+                 mouse wheel down)
+        
+        parameters: int, int, Point
+        """
+
         if self.disable:
             return
 
@@ -638,9 +716,20 @@ class Widget(Sprite, EventDispatcher):
             self.dispatch_event("on_scroll", x, y, Point(sx, sy))
 
     def on_text_motion_select(self, motion):
+        """Some text in an pyglet.IncrementalTextLayout was selected. This is
+        only used for entry widgets. See the entry widget on_text_select docs
+        for more info.
+        """
+
         self.dispatch_event("on_text_select", motion)
 
     def on_update(self, delta):
+        """Update the widget. Only do collision checking and property updating
+        here. Drawing goes in the draw function.
+        
+        delta - time elapsed since last this function was last called
+        """
+
         self.frames += 1
 
         if self.component:
@@ -661,6 +750,146 @@ class Widget(Sprite, EventDispatcher):
             self.disable = True
 
         self.dispatch_event("update")
+
+    def on_key(self, keys, modifiers):
+        """The user pressed a key(s) on the keyboard. Note that this event is
+        different from on_text, because on_text returns text typed as a string,
+        though you can convert a key to a string by using some of the keyboard
+        functions.
+
+        When pressing Tab, the focus of the container switches to the next
+        widget created. When a widget has focus, you can give it properties
+        like if a button has focus, you can press Space to invoke its command.
+        If you press Shift-Tab, the focus is moved back by one notch. Focus of
+        a widget can be gotten with the focus property, and the on_focus event.
+
+        You can use bit-wise to detect multiple modifiers:
+
+        >>> if modifiers & SHIFT and \
+                modifiers & CONTROL and \
+                keys == A:
+                # Do something
+
+        keys - key pressed by the user. In pyglet, this can be called symbol.
+        modifiers - modifiers held down during the key press.
+
+        parameters: int (32-bit), int (32-bit)
+        """
+
+    def on_lift(self, keys, modifiers):
+         """The user released a key(s) on the keyboard. Note that this event is
+        different from on_text, because on_text returns text typed as a string,
+        though you can convert a key to a string by using some of the keyboard
+        functions.
+
+        When pressing Tab, the focus of the container switches to the next
+        widget created. When a widget has focus, you can give it properties
+        like if a button has focus, you can press Space to invoke its command.
+        If you press Shift-Tab, the focus is moved back by one notch. Focus of
+        a widget can be gotten with the focus property, and the on_focus event.
+
+        You can use bit-wise to detect multiple modifiers:
+
+        >>> if modifiers & SHIFT and \
+                modifiers & CONTROL and \
+                keys == A:
+                # Do something
+
+        keys - key released by the user. In pyglet, this can be called symbol.
+        modifiers - modifiers held down during the key press.
+
+        parameters: int (32-bit), int (32-bit)
+        """
+
+    def on_hover(self, x, y, dx, dy):
+        """The widget was hovered over by the mouse. Typically, for widgets,
+        something should react to this, for example their background shadow
+        becomes more intense, or their color changes. For most widgets their
+        image changes or their color does.
+
+        For the coordinates returned for this event, you can see which specific
+        widget if it had subwidgets had the hover event. Hover states can be
+        accessed with the hover property.
+
+        x - x position of mouse
+        y - y position of mouse
+        dx - movement of mouse in vector from last position
+        dy - movement of mouse in vector from last position
+
+        parameters: int, int, int, int
+        """
+    
+    def on_press(self, x, y, buttons, modifiers):
+        """The user pressed the widget with the mouse. When this happens, the
+        widget gets the focus traversal. This event can be used with buttons,
+        labels, and other widgets for cool special effects. This event is not
+        called if the mouse is being dragged. This sets the press property to
+        True.
+
+        x - x position of press
+        y - y position of press
+        buttons - buttons defined in keyboard pressed
+        modifiers - modifiers held down during the press
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+    
+    def on_release(self, x, y, buttons, modifiers):
+        """The user released the widget with the mouse. If the widget has an
+        on_drag event, that event is canceled. For widgets, their state should
+        be set to a hover state. This sets the drag and press properties to
+        False.
+
+        x - x position of release
+        y - y position of release
+        buttons - buttons defined in keyboard releaseed
+        modifiers - modifiers held down during the release
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+    
+    def on_drag(self, x, y, dx, dy, buttons, modifiers):
+        """The user dragged the mouse, of which started over the widget. This
+        is most used on text inputs and entries, where the user can select
+        text, but can be on sliders and toggles and other widgets. There is no
+        built-in way to get the starting position of the mouse, but that can be
+        implemented. You could make a variable that gets the coordinates of each
+        mouse press, then in the on_drag event, gets the last press coordinates.
+        This sets the drag property to True.
+
+        x - x position of mouse during drag
+        y - y position of mouse during drag
+        dx - movement of mouse in vector from last position
+        dy - movement of mouse in vector from last position
+        buttons - buttons defined in keyboard during drag
+        modifiers - modifiers held down during the during drag
+
+        parameters: int, int, int, int, int (32-bit), int (32-bit)
+        """
+    
+    def on_scroll(self, x, y, scroll):
+        """The user scrolled the mouse on the widget. This should be
+        implemented in all widgets that change values, like spinboxes. Widgets
+        that only have two values (like toggles) should not use this event, as
+        it is impractical.
+
+        x - x position of mouse during drag
+        y - y position of mouse during drag
+        scroll - scroll vector (positive being the mouse wheel up, negative the
+                 mouse wheel down)
+
+        parameters: int, int, Point
+        """
+    
+    def on_focus(self):
+        """The widget recieves focus from the container. Two widgets cannot
+        have focus simultaneously. When a widget has focus, you should
+        implement events that give it more features. For example, in a spinbox
+        widget, if it has focus, the user can press the Up or Down keys to
+        increase or decrease the value. The focus property can be accessed.
+        
+        See https://en.wikipedia.org/wiki/Focus_(computing)
+        """
 
 
 Widget.register_event_type("update")
@@ -842,7 +1071,7 @@ class Label(Widget):
                                 "True, the parameter \"width\" must be set to a "
                                 "value greater than 0. See the documentation "
                                 "for more details.")
-                                 
+
         self.label = HTMLLabel(f"{text}", location, x, y,
                                anchor_x=LEFT, anchor_y=CENTER,
                                width=width, multiline=multiline,
@@ -934,11 +1163,11 @@ class Label(Widget):
 
         if not text:
             text = " "
-        
+
         self.label.begin_update()
 
         self.label.text = text
-        
+
         self.label.end_update()
 
     def _get_document(self):
@@ -1021,9 +1250,9 @@ class Label(Widget):
         """Force the label to set the text. This should only be used with
         caution, because if used excessively, will cause a performance drop.
         The update rate is completely ignored.
-        
+
         text - new text of the label
-        
+
         parameters: str
         """
 
@@ -1196,16 +1425,16 @@ class Button(Widget):
 
     def _get_text(self):
         """Get the text of the button.
-        
+
         returns: str
         """
 
         return self.label.text
-    
+
     def _set_text(self, text):
         """Set the text of the button. Unlike a label, the text is not forced,
         so it may not be the most updated.
-        
+
         parameters: str
         """
 
@@ -1391,7 +1620,7 @@ class Button(Widget):
                 # else:
                 #     continue
             break
-        
+
         multiple = double # Haha
 
         if self.callback == DOUBLE and self.focus and double:
@@ -3507,10 +3736,10 @@ class Triangle(Shape):
 
     def __init__(self, points, color=BLACK):
         """Create a triangle.
-        
+
         points - pointlist of the triangle
         color - color of of the triangle in RGB as a tuple of three ints
-        
+
         parameters: Pointlist, tuple (RGB)
         """
 
@@ -3565,7 +3794,7 @@ class Star(Shape):
                  rotation=0, color=BLACK, opengl_error=True
                 ):
         """Create a star.
-        
+
         x - x position of star
         y - y position of star
         outer - outer diameter of spike
@@ -3580,7 +3809,7 @@ class Star(Shape):
                        than the inner diameter. This is not supposed to be like
                        this, but results in interesting patterns. Defaults to
                        True.
-        
+
         parameters: int, int, int, int, int, int, tuple (RGB), bool
         """
 
@@ -3606,53 +3835,53 @@ class Star(Shape):
 
     def _get_outer(self):
         """Get the outer diameter of each spike in the star.
-        
+
         returns: int
         """
 
         return self.shape.outer_radius
-    
+
     def _set_outer(self, diameter):
         """Set the outer diameter of each spike in the star.
-        
+
         parameters: int
         """
 
         self.shape.outer_radius = diameter
-    
+
     def _get_inner(self):
         """Get the inner diameter of each spike in the star.
-        
+
         returns: int
         """
 
         return self.shape.inner_radius
-    
+
     def _set_inner(self, diameter):
         """Set the inner diameter of each spike in the star.
-        
+
         parameters: int
         """
 
         self.shape.inner_radius = diameter
-    
+
     def _get_inner(self):
         """Get the number of spikes in the star. This typically should be set
         to five.
-        
+
         returns: int
         """
 
         return self.shape.num_spikes
-    
+
     def _set_spikes(self, spikes):
         """Set the number of spikes in the star.
-        
+
         parameters: int
         """
 
         self.shape.num_spikes = spikes
-    
+
     outer = property(_get_outer, _set_outer)
     inner = property(_get_inner, _set_inner)
     spikes = property(_get_inner, _set_inner)
@@ -3707,8 +3936,6 @@ class Arc(Shape):
         self.shape.start = self.start
         self.shape.closed = self.closed
 
-
-import cProfile
 
 
 class MyWindow(Window):
@@ -3776,7 +4003,7 @@ class MyWindow(Window):
         #     10000,
         #     color=BLUE_YONDER,
         #     opengl_error=False)
- 
+
         for i in range(1, 10):
             Label(
             None,
@@ -3789,7 +4016,7 @@ class MyWindow(Window):
 
     def click(self):
         self._label.text = self.entry.text
-    
+
     def on_draw(self):
         self.clear()
         self.set_caption(f"{int(get_fps())} fps")
