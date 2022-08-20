@@ -1009,9 +1009,11 @@ _BLACK = (2, 2, 2)
 
 BACKGROUND_COLOR = ORANGE
 
+
 from typing import Tuple
 
 __all__ = [
+           "Color",
            "clamp",
            "four_byte",
            "convert_to_hex",
@@ -1020,12 +1022,111 @@ __all__ = [
            "scale_color"
           ]
 
+
+class Color:
+    """A named color."""
+
+    _is_hex = False
+    _is_rgb = False
+
+    def __init__(self, color, alpha = 255):
+        """Initialize a named color. A color is specified in the parameters and
+        its type is guessed with whether or not it is a tuple or a string. The
+        color property may be an RGB value or a hexadecimal. You can get its
+        hex or RGB values by using its properties.
+
+        color - rgb or hex value of color
+        alpha - opacity of the color
+
+        parameters: str or tuple, int
+        """
+
+        self.color = color
+        self.alpha = alpha
+
+        if isinstance(self.color, Tuple):
+            self._is_hex = True
+        else:
+            self._is_rgb = True
+
+    def _get_hex(self):
+        """Get the hexadecimal value of the color.
+
+        returns: str
+        """
+
+        if self._is_rgb:
+            return convert_to_hex((*self.color, self.alpha))
+
+        return self.color
+
+    def _get_rgb(self):
+        """Get the RGB value of the color.
+
+        returns: tuple
+        """
+
+        if self._is_hex:
+            return four_byte(*convert_to_rgb(self.color), self.alpha)
+
+        return self.color
+
+    hex = property(_get_hex)
+    rgb = property(_get_rgb)
+
+    def pale(self, decrement):
+        """Reduce the alpha of the color by decrement.
+
+        decrement - decrement of the alpha
+
+        parameters: int
+        """
+
+        self.alpha -= decrement
+
+    def solidify(self, increment):
+        """Increase the alpha of the color by increment.
+
+        increment - increment of the alpha
+
+        parameters: int
+        """
+
+        self.alpha += increment
+
+    def scale(self, factor, alpha = None):
+        """Scale color brightness by factor.
+            - If factor is less than 1, the color is darkened.
+            - If factor is greater than 1, the color is brightened.
+
+        color - color to be scaled in brightness
+        factor - see above section
+        alpha - opacity of color. It defaults to the current alpha.
+
+        parameters: tuple (RGB)
+        returns: tuple (RGB)
+
+        """
+
+        if factor < 0 or len(self.hex) != 6:
+            return self.hex
+
+        r, g, b = int(self.hex[:2], 16), int(self.hex[2:4], 16), int(self.hex[4:], 16)
+
+        r = clamp(r * factor)
+        g = clamp(g * factor)
+        b = clamp(b * factor)
+
+        self.color = (r, g, b)
+        self.alpha = alpha or self.alpha
+
+
 def clamp(x, minimum=0, maximum=255):
     """Clamp a value.
-    
+
     minimum - minimum value for clamp
     maximum - maximum value for clamp
-    
+
     parameters: int, int
     returns: int
     """
@@ -1034,14 +1135,15 @@ def clamp(x, minimum=0, maximum=255):
         return minimum
     if x > maximum:
         return maximum
+
     return int(x)
 
 def four_byte(color, alpha=255):
     """Convert a three-byte color into a four-byte color (RGBA).
-    
+
     color - three-byte color to convert
     alpha - opacity of converted four-byte color
-    
+
     parameters: tuple (RGB), int
     returns: tuple (RGBA)
     """
@@ -1050,9 +1152,9 @@ def four_byte(color, alpha=255):
 
 def convert_to_hex(rgb):
     """Convert a RGB color to a hexadecimal color.
-    
+
     rgb - three-byte RGB color to be converted to hexadecimal
-    
+
     parameters: tuple (RGB)
     returns: str (hexadecimal)
     """
@@ -1061,14 +1163,15 @@ def convert_to_hex(rgb):
 
 def convert_to_rgb(hex):
     """Convert a hexadecimal color to a RGB color.
-    
+
     hex - hexadecimal color to be converted to RGB
-    
+
     parameters: str (hex)
     returns: tuple (RGB)
     """
 
     hex.lstrip("#")
+
     return tuple(int(hex[i:i + 2], 16) for i in (0, 2, 4))
 
 def change_format(color):
@@ -1076,15 +1179,16 @@ def change_format(color):
     whether or not the color is a tuple. This just calls convert_to_hex or
     convert_to_rgb. It is recommended to use this function, but there are
     cases where you might need to use the others.
-    
+
     color - color to be converted to the opposite format
-    
+
     parameters: tuple (RGB) or str (hex)
     returns: tuple (RGB) or str (hex)
     """
 
     if isinstance(color, Tuple):
         return convert_to_hex(color)
+
     else:
         return convert_to_rgb(color)
 
@@ -1092,6 +1196,7 @@ def scale_color(color, factor):
     """Scale color brightness by factor.
         - If factor is less than 1, the color is darkened.
         - If factor is greater than 1, the color is brightened.
+
     Only RGB is supported currently.
 
     color - color to be scaled in brightness
@@ -1099,7 +1204,7 @@ def scale_color(color, factor):
 
     parameters: tuple (RGB)
     returns: tuple (RGB)
-    
+
     TODO: add support accepting hexadecimal as a parameter.
     """
 
