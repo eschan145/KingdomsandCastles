@@ -1005,8 +1005,6 @@ YELLOW_ROSE = (255, 240, 0)
 ZAFFRE = (0, 20, 168)
 ZINNWALDITE_BROWN = (44, 22, 8)
 
-_BLACK = (2, 2, 2)
-
 BACKGROUND_COLOR = ORANGE
 
 
@@ -1043,11 +1041,92 @@ class Color:
 
         self.color = color
         self.alpha = alpha
+        
+        # ValueError?
+        
+        assert self.alpha < 255 and self.alpha > 0, \
+               ("For all colors, the alpha must be a value less than 255 and "
+                "greater than 0."
+               )
 
         if isinstance(self.color, Tuple):
             self._is_hex = True
         else:
             self._is_rgb = True
+
+        if self._is_rgb:
+            assert [value < 255 and value > 0 for value in self.color], \
+                    ("For RGB colors, each value (red, green, and blue) must "
+                     "be less than 255 and greater than 0. An alpha of 255 is "
+                     "completely solid, while an alpha of 0 is opaque."
+                    )
+    
+    def __add__(self, color):
+        """Add another color or value to the color.
+        
+        >>> Color((244, 244, 244)) + Color((6, 6, 6))
+        Color(250, 250, 250)
+        
+        color - color to be added to the color
+        
+        parameters: Color or tuple (RGB)
+        """
+        
+        if isinstance(color, str):
+            # Assummed hexadecimal color
+            color = convert_to_rgb(color)
+            
+        rgb = self.rgb
+        
+        for value in rgb:
+            value += color.index(value)
+        
+        self.color = value
+    
+    def __getitem__(self, index):
+        """Get an item from the RGB values.
+        
+        index - index of the color
+        
+        parameters: int
+        returns: int
+        """
+        
+        return self.rgb[index]
+
+    def __setitem__(self, index, value):
+        """Set an item from the RGB values.
+        
+        index - index of the color
+        value - new value of color
+        
+        parameters: int, int
+        returns: int
+        """
+        
+        self.color[index] = value
+        
+    def __sub__(self, color):
+        """Subtract another color or value from the color.
+        
+        >>> Color((244, 244, 244)) - Color((6, 6, 6))
+        Color(238, 238, 238)
+        
+        color - color to be added to the color
+        
+        parameters: Color or tuple (RGB)
+        """
+        
+        if isinstance(color, str):
+            # Assummed hexadecimal color
+            color = convert_to_rgb(color)
+            
+        rgb = self.rgb
+        
+        for value in rgb:
+            value -= color.index(value)
+        
+        self.color = value
 
     def _get_hex(self):
         """Get the hexadecimal value of the color.
