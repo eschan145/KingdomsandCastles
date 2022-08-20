@@ -5,9 +5,31 @@ More than meets the eye in this example. To see all features, look at the source
 code of each widget. This includes several different types of interactive
 widgets and displays an example at the end. It also includes API for creating
 your own widgets, which are quite easy to do.
+
+Several widgets are provided to use. These include Image, Label, Button,
+Slider, Toggle, Entry, Combobox, and various shapes. Like most projects based
+off pyglet, in this GUI toolkit, all widgets subclass a base widget class,
+which dispatches events to them.
+
+This uses the awesome pyglet and arcade libraries, which are still active and
+working today. Arcade's website is https://arcade.academy/, while pyglet's is
+https://pyglet.org/.
+
+Contributions are welcome. Visit my Github respository at
+https://github.com/eschan145/Armies. From there, you can submit pull requests
+or chat in discussions.
+
+Code and graphics by Ethan Chan
+
+GitHub: eschan145
+Discord: EthanC145
+
+Contact me at esamuelchan@gmail.com
 """
 
 from cmath import tau
+from html import entities
+from html.parser import HTMLParser
 from string import printable
 from tkinter import Tk
 from typing import Tuple
@@ -19,15 +41,22 @@ from arcade import (PointList, ShapeElementList, Sprite, SpriteList, Window,
                     get_window, load_texture, run, schedule, unschedule)
 from pyglet.event import EventDispatcher
 from pyglet.graphics import Batch
+from pyglet.image import load
 from pyglet.shapes import (Arc, BorderedRectangle, Circle, Ellipse, Line,
                            Polygon, Sector, Star, Triangle)
-from pyglet.text import HTMLLabel, decode_text
+from pyglet.text import HTMLLabel, decode_text, DocumentLabel
 from pyglet.text.caret import Caret
+from pyglet.text.formats.html import (_block_containers, _block_elements,
+                                      _metadata_elements, _parse_color,
+                                      _whitespace_re)
+from pyglet.text.formats.structured import (ImageElement, OrderedListBuilder,
+                                            StructuredTextDecoder,
+                                            UnorderedListBuilder)
 from pyglet.text.layout import IncrementalTextLayout
 from pymunk import shapes
 
-from color import (BLACK, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY, RED, WHITE,
-                   four_byte)
+from color import (BLACK, BLUE_YONDER, COOL_BLACK, DARK_GRAY, DARK_SLATE_GRAY,
+                   RED, WHITE, four_byte)
 from constants import (BOTTOM, CENTER, DEFAULT_FONT, DEFAULT_FONT_FAMILY,
                        DEFAULT_FONT_SIZE, DISABLE_ALPHA, DOUBLE,
                        ENTRY_BLINK_INTERVAL, KNOB_HOVER_SCALE, LEFT, MULTIPLE,
@@ -77,7 +106,7 @@ def clipboard_append(text):
 
 def insert(index, text, add):
     """Insert some text to a string given an index. This was originally used for
-    the Entry widget but was deceprated when we found a faster and more
+    the entry widget but was deceprated when we found a faster and more
     efficient way to insert text.
 
     index - index of the text addition
@@ -92,7 +121,7 @@ def insert(index, text, add):
 
 def delete(start, end, text):
     """Delete some text to a string given an index. This was originally used for
-    the Entry widget but was deceprated when we found a faster and more
+    the entry widget but was deceprated when we found a faster and more
     efficient way to delete text.
 
     start - start index of the text removal
@@ -106,6 +135,366 @@ def delete(start, end, text):
     if len(text) > end:
         text = text[0: start:] + text[end + 1::]
     return text
+
+
+class HTMLDecoder(HTMLParser, StructuredTextDecoder):
+    """A custom HTML decoder based off pyglet's built-in one. This has limited
+    functionality but still feature-rich.
+    """
+
+    default_style = {
+        'font_name': 'Montserrat',
+        'font_size': 12,
+        'margin_bottom': '12pt',
+        'bold': False,
+        'italic': False,
+    }
+
+    font_sizes = {
+        1: 8,
+        2: 10,
+        3: 12,
+        4: 14,
+        5: 18,
+        6: 24,
+        7: 48
+    }
+
+    def decode_structured(self, text, location):
+        """Decode some structured text and convert it to the pyglet attributed
+        text (vnd.pyglet-attributed).
+
+        text - given HTML text to be decoded into pyglet attributed text
+        location - location of images and filepaths for the document
+
+        parameters: str, str
+        """
+
+        self.location = location
+        self._font_size_stack = [3]
+        self.list_stack.append(UnorderedListBuilder({}))
+        self.strip_leading_space = True
+        self.block_begin = True
+        self.need_block_begin = False
+        self.element_stack = ['_top_block']
+        self.in_metadata = False
+        self.in_pre = False
+
+        # Set default style
+
+        self.push_style('_default', self.default_style)
+
+        self.feed(text)
+        self.close()
+
+    def get_image(self, filename):
+        """Get an image from a filename. This uses the location.
+
+        filename - filename of image
+
+        parameters: str
+        """
+
+        return load(filename, file=self.location.open(filename))
+
+    def prepare_for_data(self):
+        """Prepare the document for insertion of HTML text.
+        """
+
+        if self.need_block_begin:
+            self.add_text('\n')
+            self.block_begin = True
+            self.need_block_begin = False
+
+    def handle_data(self, data):
+        """Handle HTML data.
+
+        data - HTML data
+        """
+
+        if self.in_metadata:
+            return
+
+        if self.in_pre:
+            self.add_text(data)
+        else:
+            data = _whitespace_re.sub(' ', data)
+            if data.strip():
+                self.prepare_for_data()
+                if self.block_begin or self.strip_leading_space:
+                    data = data.lstrip()
+                    self.block_begin = False
+                self.add_text(data)
+            self.strip_leading_space = data.endswith(' ')
+
+    def handle_starttag(self, tag, case_attrs):
+        """Handle the start of tags for all HTML elements. This creates a map
+        of all the elements and pushes its style to a pyglet structured text
+        decoder. They may be upper or lower case.
+        """
+
+        if self.in_metadata:
+            return
+
+        element = tag.lower()
+        attrs = {}
+        for key, value in case_attrs:
+            attrs[key.lower()] = value
+
+        if element in _metadata_elements:
+            self.in_metadata = True
+        elif element in _block_elements:
+            # Pop off elements until we get to a block container.
+            while self.element_stack[-1] not in _block_containers:
+                self.handle_endtag(self.element_stack[-1])
+            if not self.block_begin:
+                self.add_text('\n')
+                self.block_begin = True
+                self.need_block_begin = False
+        self.element_stack.append(element)
+
+        style = {}
+        if element in ('b', 'strong'):
+            style['bold'] = True
+        elif element in ('i', 'em', 'var'):
+            style['italic'] = True
+        elif element in ('tt', 'code', 'samp', 'kbd'):
+            style['font_name'] = 'Courier New'
+        elif element == 'u':
+            color = self.current_style.get('color')
+            if color is None:
+                color = [0, 0, 0, 255]
+            style['underline'] = color
+        elif element == 'font':
+            if 'face' in attrs:
+                style['font_name'] = attrs['face'].split(',')
+            if 'size' in attrs:
+                size = attrs['size']
+                try:
+                    if size.startswith('+'):
+                        size = self._font_size_stack[-1] + int(size[1:])
+                    elif size.startswith('-'):
+                        size = self._font_size_stack[-1] - int(size[1:])
+                    else:
+                        size = int(size)
+                except ValueError:
+                    size = 3
+                self._font_size_stack.append(size)
+                if size in self.font_sizes:
+                    style['font_size'] = self.font_sizes.get(size, 3)
+            elif 'real_size' in attrs:
+                size = int(attrs['real_size'])
+                self._font_size_stack.append(size)
+                style['font_size'] = size
+            else:
+                self._font_size_stack.append(self._font_size_stack[-1])
+            if 'color' in attrs:
+                try:
+                    style['color'] = _parse_color(attrs['color'])
+                except ValueError:
+                    pass
+        elif element == 'sup':
+            size = self._font_size_stack[-1] - 1
+            style['font_size'] = self.font_sizes.get(size, 1)
+            style['baseline'] = '3pt'
+        elif element == 'sub':
+            size = self._font_size_stack[-1] - 1
+            style['font_size'] = self.font_sizes.get(size, 1)
+            style['baseline'] = '-3pt'
+        elif element == 'h1':
+            style['font_size'] = 24
+            style['bold'] = True
+            style['align'] = 'center'
+        elif element == 'h2':
+            style['font_size'] = 18
+            style['bold'] = True
+        elif element == 'h3':
+            style['font_size'] = 16
+            style['bold'] = True
+        elif element == 'h4':
+            style['font_size'] = 14
+            style['bold'] = True
+        elif element == 'h5':
+            style['font_size'] = 12
+            style['bold'] = True
+        elif element == 'h6':
+            style['font_size'] = 12
+            style['italic'] = True
+        elif element == 'br':
+            self.add_text(u'\u2028')
+            self.strip_leading_space = True
+        elif element == 'p':
+            if attrs.get('align') in ('left', 'center', 'right'):
+                style['align'] = attrs['align']
+        elif element == 'center':
+            style['align'] = 'center'
+        elif element == 'pre':
+            style['font_name'] = 'Courier New'
+            style['margin_bottom'] = 0
+            self.in_pre = True
+        elif element == 'blockquote':
+            left_margin = self.current_style.get('margin_left') or 0
+            right_margin = self.current_style.get('margin_right') or 0
+            style['margin_left'] = left_margin + 60
+            style['margin_right'] = right_margin + 60
+        elif element == 'q':
+            self.handle_data(u'\u201c')
+        elif element == 'ol':
+            try:
+                start = int(attrs.get('start', 1))
+            except ValueError:
+                start = 1
+            format = attrs.get('type', '1') + '.'
+            builder = OrderedListBuilder(start, format)
+            builder.begin(self, style)
+            self.list_stack.append(builder)
+        elif element in ('ul', 'dir', 'menu'):
+            type = attrs.get('type', 'disc').lower()
+            if type == 'circle':
+                mark = u'\u25cb'
+            elif type == 'square':
+                mark = u'\u25a1'
+            else:
+                mark = u'\u25cf'
+            builder = UnorderedListBuilder(mark)
+            builder.begin(self, style)
+            self.list_stack.append(builder)
+        elif element == 'li':
+            self.list_stack[-1].item(self, style)
+            self.strip_leading_space = True
+        elif element == 'dl':
+            style['margin_bottom'] = 0
+        elif element == 'dd':
+            left_margin = self.current_style.get('margin_left') or 0
+            style['margin_left'] = left_margin + 30
+        elif element == 'img':
+            image = self.get_image(attrs.get('src'))
+            if image:
+                width = attrs.get('width')
+                if width:
+                    width = int(width)
+                height = attrs.get('height')
+                if height:
+                    height = int(height)
+                self.prepare_for_data()
+                self.add_element(ImageElement(image, width, height))
+                self.strip_leading_space = False
+
+        self.push_style(element, style)
+
+    def handle_endtag(self, tag):
+        """Handle the end tags for the HTML document. They may be upper or lower case."""
+        element = tag.lower()
+
+        if element not in self.element_stack:
+            return
+
+        self.pop_style(element)
+
+        while self.element_stack.pop() != element:
+            pass
+
+        if element in _metadata_elements:
+            self.in_metadata = False
+        elif element in _block_elements:
+            self.block_begin = False
+            self.need_block_begin = True
+
+        if element == 'font' and len(self._font_size_stack) > 1:
+            self._font_size_stack.pop()
+        elif element == 'pre':
+            self.in_pre = False
+        elif element == 'q':
+            self.handle_data(u'\u201d')
+        elif element in ('ul', 'ol'):
+            if len(self.list_stack) > 1:
+                self.list_stack.pop()
+
+    def handle_entityref(self, name):
+        """Handle entity references from the HTML document.
+        """
+
+        if name in entities.name2codepoint:
+            self.handle_data(chr(entities.name2codepoint[name]))
+
+    def handle_charref(self, name):
+        """Handle character references from the HTML document.
+        """
+
+        name = name.lower()
+
+        try:
+            if name.startswith('x'):
+                self.handle_data(chr(int(name[1:], 16)))
+            else:
+                self.handle_data(chr(int(name)))
+        except ValueError:
+            pass
+
+
+class HTMLLabel(DocumentLabel):
+    """HTML formatted text label.
+
+    A subset of HTML 4.01 is supported.  See `pyglet.text.formats.html` for
+    details.
+    """
+
+    def __init__(self, text='', location=None,
+                 x=0, y=0, width=None, height=None,
+                 anchor_x='left', anchor_y='baseline',
+                 multiline=False):
+        """Create a label with an HTML string.
+
+        :Parameters:
+            `text` : str
+                HTML formatted text to display.
+            `location` : `Location`
+                Location object for loading images referred to in the
+                document.  By default, the working directory is used.
+            `x` : int
+                X coordinate of the label.
+            `y` : int
+                Y coordinate of the label.
+            `width` : int
+                Width of the label in pixels, or None
+            `height` : int
+                Height of the label in pixels, or None
+            `anchor_x` : str
+                Anchor point of the X coordinate: one of ``"left"``,
+                ``"center"`` or ``"right"``.
+            `anchor_y` : str
+                Anchor point of the Y coordinate: one of ``"bottom"``,
+                ``"baseline"``, ``"center"`` or ``"top"``.
+            `multiline` : bool
+                If True, the label will be word-wrapped and render paragraph
+                and line breaks.  You must also set the width of the label.
+        """
+
+        self._text = text
+        self._location = location
+
+        document = HTMLDecoder().decode(text, location)
+
+        DocumentLabel.__init__(self, document, x, y, width, height,
+                               anchor_x, anchor_y, multiline, None, batch,
+                               None)
+
+    def _get_text(self):
+        """HTML formatted text of the label.
+
+        :type: str
+        """
+        return self._text
+
+    def _set_text(self, text):
+        if text == self._text:
+            return
+
+        self._text = text
+
+        self.document = HTMLDecoder().decode(text)
+
+    text = property(_get_text, _set_text)
 
 
 class WidgetsError(Exception):
@@ -242,8 +631,8 @@ class Container(EventDispatcher):
         widget.container = self
 
     def draw(self):
-        """Draw the container's widgets. This just loops through all of the
-        widgets in its list and draws them, which is terribly inefficient.
+        """Draw the container's widgets. This should be manually called in the
+        draw function of your application.
         """
 
         widgets_list.draw()
@@ -676,7 +1065,7 @@ class Widget(Sprite, EventDispatcher):
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """The user dragged the mouse.
-        
+
         x - x position of mouse during drag
         y - y position of mouse during drag
         dx - movement of mouse in vector from last position
@@ -697,12 +1086,12 @@ class Widget(Sprite, EventDispatcher):
 
     def on_mouse_scroll(self, x, y, sx, sy):
         """The user scrolled the mouse.
-        
+
         x - x position of mouse during drag
         y - y position of mouse during drag
         scroll - scroll vector (positive being the mouse wheel up, negative the
                  mouse wheel down)
-        
+
         parameters: int, int, Point
         """
 
@@ -726,7 +1115,7 @@ class Widget(Sprite, EventDispatcher):
     def on_update(self, delta):
         """Update the widget. Only do collision checking and property updating
         here. Drawing goes in the draw function.
-        
+
         delta - time elapsed since last this function was last called
         """
 
@@ -777,7 +1166,7 @@ class Widget(Sprite, EventDispatcher):
         """
 
     def on_lift(self, keys, modifiers):
-         """The user released a key(s) on the keyboard. Note that this event is
+        """The user released a key(s) on the keyboard. Note that this event is
         different from on_text, because on_text returns text typed as a string,
         though you can convert a key to a string by using some of the keyboard
         functions.
@@ -818,7 +1207,7 @@ class Widget(Sprite, EventDispatcher):
 
         parameters: int, int, int, int
         """
-    
+
     def on_press(self, x, y, buttons, modifiers):
         """The user pressed the widget with the mouse. When this happens, the
         widget gets the focus traversal. This event can be used with buttons,
@@ -833,7 +1222,7 @@ class Widget(Sprite, EventDispatcher):
 
         parameters: int, int, int (32-bit), int (32-bit)
         """
-    
+
     def on_release(self, x, y, buttons, modifiers):
         """The user released the widget with the mouse. If the widget has an
         on_drag event, that event is canceled. For widgets, their state should
@@ -847,7 +1236,7 @@ class Widget(Sprite, EventDispatcher):
 
         parameters: int, int, int (32-bit), int (32-bit)
         """
-    
+
     def on_drag(self, x, y, dx, dy, buttons, modifiers):
         """The user dragged the mouse, of which started over the widget. This
         is most used on text inputs and entries, where the user can select
@@ -866,7 +1255,7 @@ class Widget(Sprite, EventDispatcher):
 
         parameters: int, int, int, int, int (32-bit), int (32-bit)
         """
-    
+
     def on_scroll(self, x, y, scroll):
         """The user scrolled the mouse on the widget. This should be
         implemented in all widgets that change values, like spinboxes. Widgets
@@ -880,14 +1269,14 @@ class Widget(Sprite, EventDispatcher):
 
         parameters: int, int, Point
         """
-    
+
     def on_focus(self):
         """The widget recieves focus from the container. Two widgets cannot
         have focus simultaneously. When a widget has focus, you should
         implement events that give it more features. For example, in a spinbox
         widget, if it has focus, the user can press the Up or Down keys to
         increase or decrease the value. The focus property can be accessed.
-        
+
         See https://en.wikipedia.org/wiki/Focus_(computing)
         """
 
@@ -1075,7 +1464,6 @@ class Label(Widget):
         self.label = HTMLLabel(f"{text}", location, x, y,
                                anchor_x=LEFT, anchor_y=CENTER,
                                width=width, multiline=multiline,
-                               batch=batch
                                )
 
         Widget.__init__(self, frame=frame)
@@ -1148,7 +1536,8 @@ class Label(Widget):
         return self.document.text
 
     def _set_text(self, text):
-        """Set the text of the label.
+        """Set the text of the label. It is not recommended to call this
+        repeatedly with a high update rate, as this can cause the fps to drop.
 
         text - new text of the label
 
@@ -1365,8 +1754,8 @@ class Button(Widget):
                  callback=SINGLE
                 ):
 
-        """Initialize a Button. A button has two components: an Image and a
-        Label. You can customize the Button's images and display by changing
+        """Initialize a button. A button has two components: an Image and a
+        Label. You can customize the button's images and display by changing
         its normal_image, hover_image, press_image, and disable_image
         properties, but it is recommended to use the Pushable widget.
 
@@ -1421,7 +1810,8 @@ class Button(Widget):
         self.normal_image = load_texture(widgets[f"{colors[0]}_button_normal"])
         self.hover_image = load_texture(widgets[f"{colors[0]}_button_hover"])
         self.press_image = load_texture(widgets[f"{colors[0]}_button_press"])
-        self.disable_image = load_texture(widgets[f"{colors[0]}_button_disable"])
+        self.disable_image = load_texture(
+            widgets[f"{colors[0]}_button_disable"])
 
     def _get_text(self):
         """Get the text of the button.
@@ -1519,7 +1909,7 @@ class Button(Widget):
     def invoke(self):
         """Invoke the button. This switches its image to a pressed state and
         calls the its associated command with the specified parameters. If the
-        Button is disabled this has no effect.
+        button is disabled this has no effect.
         """
 
         if self.disable or not self.command:
@@ -1575,7 +1965,7 @@ class Button(Widget):
 
     def on_key(self, keys, modifiers):
         """A key is pressed. This is used for keyboard shortcuts when the
-        Button has focus.
+        button has focus.
 
         keys - key pressed
         modifiers - modifier pressed
@@ -1595,7 +1985,7 @@ class Button(Widget):
                 self.invoke()
 
     def update(self):
-        """Update the Button. This registers events and updates the Button
+        """Update the button. This registers events and updates the button
         image.
         """
 
@@ -1648,7 +2038,7 @@ class Slider(Widget):
 
     def __init__(self, text, x, y, colors=BLACK, font=DEFAULT_FONT,
                  size=10, length=200, padding=50, round=0):
-        """Initialize a Slider."""
+        """Initialize a slider."""
 
         self.bar = Image(slider_horizontal, x, y)
         self.knob = Image(knob, x, y)
@@ -1670,7 +2060,7 @@ class Slider(Widget):
         self.knob.left = self.x - self.length / 2
 
     def _get_value(self):
-        """Get the value or x of the Slider.
+        """Get the value or x of the slider.
 
         returns: int
         """
@@ -1678,7 +2068,7 @@ class Slider(Widget):
         return self._value
 
     def _set_value(self, value):
-        """Set the value or x of the Slider.
+        """Set the value or x of the slider.
 
         value - new value to be set
 
@@ -1701,7 +2091,7 @@ class Slider(Widget):
         self.knob.x = max(self.left, min(x - self.knob.width / 2, max_knob_x))
 
     def _get_x(self):
-        """Get the x position of the Slider.
+        """Get the x position of the slider.
 
         returns: int
         """
@@ -1757,7 +2147,7 @@ class Slider(Widget):
                       / (self.left - self.right)), self.round)
 
     def reposition_knob(self):
-        """Update the value of the Slider. This is used when you want to move
+        """Update the value of the slider. This is used when you want to move
         the knob without it snapping to a certain position and want to update
         its value. update_knob(x) sets a velocity so the knob can glide.
         """
@@ -1766,7 +2156,7 @@ class Slider(Widget):
                       / (self.left - self.right)), self.round)
 
     def draw(self):
-        """Draw the Slider. The component of the Slider is the bar, which takes
+        """Draw the slider. The component of the slider is the bar, which takes
         all of the collision points.
 
         1. Bar (component)
@@ -1789,7 +2179,7 @@ class Slider(Widget):
         self.component = self.bar
 
     def on_key(self, keys, modifiers):
-        """A key is pressed. This is used for keyboard shortcuts when the Slider
+        """A key is pressed. This is used for keyboard shortcuts when the slider
         has focus. On a right key press, the value is incremented by one. On a
         left key press, the value is decremented by one.
 
@@ -1812,7 +2202,7 @@ class Slider(Widget):
             self.reposition_knob()
 
     def on_press(self, x, y, buttons, modifiers):
-        """The Slider is pressed. This updates the knob to the x position of the
+        """The slider is pressed. This updates the knob to the x position of the
         press.
 
         x - x position of the press
@@ -1905,16 +2295,16 @@ class Toggle(Widget):
                  default=True, padding=160
                 ):
 
-        """Initialize a Toggle. A Toggle is a widget that when pressed, switches
+        """Initialize a toggle. A toggle is a widget that when pressed, switches
         between True and False values.
 
-        text - text to be displayed alongside the Toggle
-        x - x position of the Toggle
-        y - y position of the Toggle
+        text - text to be displayed alongside the toggle
+        x - x position of the toggle
+        y - y position of the toggle
         colors - text color of the Label
         font - font of the Label
-        default - default value of the Toggle
-        padding - padding of the Label and the Toggle
+        default - default value of the toggle
+        padding - padding of the Label and the toggle
 
         parameters: str, int, int, tuple, tuple, bool, int
         """
@@ -1947,7 +2337,7 @@ class Toggle(Widget):
         self.knob.left = self.bar.left + 2
 
     def _get_x(self):
-        """Get the x position of the Toggle.
+        """Get the x position of the toggle.
 
         returns: int
         """
@@ -1955,9 +2345,9 @@ class Toggle(Widget):
         return self.bar.x
 
     def _set_x(self, x):
-        """Set the x position of the Toggle.
+        """Set the x position of the toggle.
 
-        x - new x position of the Toggle
+        x - new x position of the toggle
 
         parameters: int
         """
@@ -1966,7 +2356,7 @@ class Toggle(Widget):
         self.label.x = self.bar.left - self.padding
 
     def _get_y(self):
-        """Get the y position of the Toggle.
+        """Get the y position of the toggle.
 
         returns: int
         """
@@ -1974,9 +2364,9 @@ class Toggle(Widget):
         return self.bar.y
 
     def _set_y(self, y):
-        """Set the y position of the Toggle.
+        """Set the y position of the toggle.
 
-        y - new y position of the Toggle
+        y - new y position of the toggle
 
         parameters: int
         """
@@ -1987,7 +2377,7 @@ class Toggle(Widget):
     y = property(_get_y, _set_y)
 
     def draw(self):
-        """Draw the Toggle. The component of the toggle is the bar, which takes
+        """Draw the toggle. The component of the toggle is the bar, which takes
         all of the collision points.
 
         1. Bar (component)
@@ -2005,7 +2395,7 @@ class Toggle(Widget):
         self.component = self.bar
 
     def on_press(self, x, y, buttons, modifiers):
-        """The Toggle is pressed. This switches between True and False values. If
+        """The toggle is pressed. This switches between True and False values. If
         the Control key is held down during this, this will have no effect.
 
         x - x position of the press
@@ -2020,8 +2410,8 @@ class Toggle(Widget):
             self.switch = True
 
     def on_key(self, keys, modifiers):
-        """A key is pressed. This is used for keyboard shortcuts when the Toggle
-        has focus. If the Space or Enter key is pressed, the Toggle will be
+        """A key is pressed. This is used for keyboard shortcuts when the toggle
+        has focus. If the Space or Enter key is pressed, the toggle will be
         switched.
 
         keys - key pressed
@@ -2102,8 +2492,10 @@ class Toggle(Widget):
         else:
             self.knob.scale = 1
 
+_Caret = Caret
 
-class Caret(Caret):
+
+class Caret(_Caret):
     """Caret used for pyglet.text.IncrementalTextLayout."""
 
     BLINK_INTERVAL = 0
@@ -2185,7 +2577,7 @@ class Caret(Caret):
         self._nudge()
 
     def _update(self, line=None, update_ideal_x=True):
-        """Update the caret. This is used internally for the Entry widget.
+        """Update the caret. This is used internally for the entry widget.
 
         line - current line of the caret
         update_ideal_x - x position of line is updated
@@ -2262,52 +2654,52 @@ class Entry(Widget):
     VALIDATION_REGULAR = None
 
     def __init__(self, x, y, text="", font=default_font, color=BLACK):
-        """Initialize the Entry. Typically a widget will push events
+        """Initialize the entry. Typically a widget will push events
         automatically, but because there are custom named events, they have
         to be defined here.
 
-        An Entry is a widget where text input can be returned. Typing into
-        an Entry appends some text, which can be used for usernames,
+        An entry is a widget where text input can be returned. Typing into
+        an entry appends some text, which can be used for usernames,
         passwords, and more. Text can be removed by many keys.
 
-        x - x position of the Entry
-        y - y position of the Entry
-        text - default text of the Entry
-        font - font of the text in the Entry
+        x - x position of the entry
+        y - y position of the entry
+        text - default text of the entry
+        font - font of the text in the entry
         color - color of the text in RGB as a tuple of three ints
 
         properties:
             document - document of the IncrementalTextLayout
             layout - internal IncrementalTextLayout for efficient rendering
-            caret - caret of the Entry
-            image - image displayed to give the Entry a graphical look
+            caret - caret of the entry
+            image - image displayed to give the entry a graphical look
 
-            x - x position of the Entry
-            y - y position of the Entry
-            default - default text of the Entry (changing this has no effect)
-            font - font of the Entry
+            x - x position of the entry
+            y - y position of the entry
+            default - default text of the entry (changing this has no effect)
+            font - font of the entry
 
             blinking - caret is visible or not visible
 
-            length - length of the text in the Entry
-            max - maximum amount of characters in the Entry
+            length - length of the text in the entry
+            max - maximum amount of characters in the entry
 
-            text - displayed text of the Entry
-            selection - selected text of the Entry
-            layout_colors - layout colors of the Entry
-            validate - validation of the characters in the Entry
+            text - displayed text of the entry
+            selection - selected text of the entry
+            layout_colors - layout colors of the entry
+            validate - validation of the characters in the entry
             index - index of the caret (position)
-            view - view vector of the Entry
+            view - view vector of the entry
 
         methods:
             blink - blink the caret and switch its visibility
-            insert - insert some text in the Entry
-            delete - delete some text from the Entry
+            insert - insert some text in the entry
+            delete - delete some text from the entry
         """
 
         self._document = decode_text(text)
 
-        self.layout = IncrementalTextLayout(self._document, 190, 24, batch=batch)
+        self.layout = IncrementalTextLayout(self._document, 190, 24)
 
         self.image = Image(entry_normal, x, y)
         self.caret = Caret(self.layout)
@@ -2332,7 +2724,7 @@ class Entry(Widget):
         )
 
     def _get_document(self):
-        """Get the current document of the Entry.
+        """Get the current document of the entry.
 
         returns: pyglet.text.document.UnformattedDocument
         """
@@ -2340,9 +2732,11 @@ class Entry(Widget):
         return self.layout.document
 
     def _set_document(self, document):
-        """Set the current document of the Entry.
+        """Set the document of the entry. This is far less efficient than
+        modifying the current document, as relayout and recalculating glyphs
+        is very costly.
 
-        document - new document of Entry
+        document - new document of entry
 
         parameters: pyglet.text.document.UnformattedDocument
         """
@@ -2350,7 +2744,7 @@ class Entry(Widget):
         self.layout.document = document
 
     def _get_text(self):
-        """Return the text of the Entry.
+        """Return the text of the entry.
 
         returns: str
         """
@@ -2358,11 +2752,11 @@ class Entry(Widget):
         return self.document.text
 
     def _set_text(self, text):
-        """Set the text of the Entry.
+        """Set the text of the entry.
 
         text - new text to be displayed. This can be a string or a tuple
         change_index - index is changed after text input. If True, the index
-                       is set to the end of the Entry.
+                       is set to the end of the entry.
 
         parameters: str or tuple
         """
@@ -2383,7 +2777,7 @@ class Entry(Widget):
         self.document.text = text
 
     def _get_x(self):
-        """Get the x position of the Entry.
+        """Get the x position of the entry.
 
         returns: int
         """
@@ -2391,9 +2785,9 @@ class Entry(Widget):
         return self.image.x
 
     def _set_x(self, x):
-        """Set the x position of the Entry.
+        """Set the x position of the entry.
 
-        x - new x position of the Entry
+        x - new x position of the entry
 
         parameters: int
         """
@@ -2402,7 +2796,7 @@ class Entry(Widget):
         self.image.x = x
 
     def _get_y(self):
-        """Get the y position of the Entry.
+        """Get the y position of the entry.
 
         returns: int
         """
@@ -2410,9 +2804,9 @@ class Entry(Widget):
         return self.image.y
 
     def _set_y(self, y):
-        """Set the y position of the Entry.
+        """Set the y position of the entry.
 
-        y - new y position of the Entry
+        y - new y position of the entry
 
         parameters: int
         """
@@ -2440,7 +2834,7 @@ class Entry(Widget):
         self.caret.position = index
 
     def _get_selection(self):
-        """Get the selection indices of the Entry, with the start and end as
+        """Get the selection indices of the entry, with the start and end as
         a tuple.
 
         (start, end)
@@ -2457,7 +2851,7 @@ class Entry(Widget):
                )
 
     def _set_selection(self, selection):
-        """Set the selection indices of the Entry, which are defined with
+        """Set the selection indices of the entry, which are defined with
         the property layout_colors.
 
         selection - tuple of selection indices (start, end)
@@ -2471,7 +2865,7 @@ class Entry(Widget):
         self.layout.selection_end = selection[1]
 
     def _get_layout_colors(self):
-        """Get the layout colors of the Entry. This will return a tuple of
+        """Get the layout colors of the entry. This will return a tuple of
         three colors defined by _set_layout_color. The selection background
         defaults to (46, 106, 197).
 
@@ -2487,7 +2881,7 @@ class Entry(Widget):
                 )
 
     def _set_layout_colors(self, colors):
-        """Set the layout colors of the Entry.
+        """Set the layout colors of the entry.
 
         colors - tuple of three colors. The first item is the background
                 color of the selection, while the second item is the caret
@@ -2502,7 +2896,7 @@ class Entry(Widget):
         self.caret.color = colors[1]
 
     def _get_validate(self):
-        """Get the validation of the Entry.
+        """Get the validation of the entry.
 
         returns: str
         """
@@ -2510,7 +2904,7 @@ class Entry(Widget):
         return self._validate
 
     def _set_validate(self, validate):
-        """Set the validation of the Entry. This is a string containing all
+        """Set the validation of the entry. This is a string containing all
         of the characters the user is able to type. Common charsets cam be
         found in the string module.
 
@@ -2522,7 +2916,7 @@ class Entry(Widget):
         self._validate = validate
 
     def _get_view(self):
-        """Get the view vector of the Entry.
+        """Get the view vector of the entry.
 
         returns: tuple (x, y)
         """
@@ -2533,7 +2927,7 @@ class Entry(Widget):
         )
 
     def _set_view(self, view):
-        """Set the view vector of the Entry.
+        """Set the view vector of the entry.
 
         view - vector of x and y views as a Point
 
@@ -2625,7 +3019,7 @@ class Entry(Widget):
         self.document._delete_text(start, end)
 
     def draw(self):
-        """Draw the Entry. The layout is drawn with pyglet rendering.
+        """Draw the entry. The layout is drawn with pyglet rendering.
 
         1. Image component
         2. Layout
@@ -2658,7 +3052,7 @@ class Entry(Widget):
                 self.selection = (0, self.length, self.text)
 
     def on_focus(self):
-        """The Entry has focus, activating events. This activates the caret
+        """The entry has focus, activating events. This activates the caret
         and stops a few errors.
         """
 
@@ -2668,8 +3062,8 @@ class Entry(Widget):
             self.mark = None
 
     def on_text(self, text):
-        """The Entry has text input. The Entry adds text to the end.
-        Internally, the Entry does a few things:
+        """The entry has text input. The entry adds text to the end.
+        Internally, the entry does a few things:
 
             - Remove all selected text
             - Update the caret position
@@ -2691,7 +3085,7 @@ class Entry(Widget):
         self.caret.on_text(text)
 
     def on_text_motion(self, motion):
-        """The Entry has caret motion. This can be moving the caret's
+        """The entry has caret motion. This can be moving the caret's
         position to the left with the Left key, deleting a character
         previous with the Backspace key, and more.
 
@@ -2720,7 +3114,7 @@ class Entry(Widget):
                 pass
 
     def on_text_select(self, motion):
-        """Some text in the Entry is selected. When this happens, the
+        """Some text in the entry is selected. When this happens, the
         selected text will have a blue background to it. Moving the caret
         with a text motion removes the selection (does not remove the text).
 
@@ -2741,7 +3135,7 @@ class Entry(Widget):
             self.index = self.caret.position
 
     def on_press(self, x, y, buttons, modifiers):
-        """The Entry is pressed. This will do a number of things.
+        """The entry is pressed. This will do a number of things.
 
             - The caret's position is set to the nearest character.
             - If text is selected, the selection will be removed.
@@ -2793,7 +3187,7 @@ class Entry(Widget):
                 self.index = self.caret.position
 
     def update(self):
-        """Update the caret and Entry. This schedules caret blinking and
+        """Update the caret and entry. This schedules caret blinking and
         keeps track of focus.
         """
 
@@ -2813,6 +3207,456 @@ class Entry(Widget):
 
             unschedule(self.blink)
 
+
+class Text(Widget):
+
+    def __init__(self, x, y, text="asdfa", font=default_font, color=BLACK):
+        self._document = decode_text(text)
+
+        self.layout = IncrementalTextLayout(self._document, 300, 240, multiline=True, batch=batch)
+
+        self.image = Image(entry_normal, x, y)
+        self.caret = Caret(self.layout)
+
+        Widget.__init__(self, (self.image))
+
+        self.x = x
+        self.y = y
+        self.default = text
+        self.font = font
+
+        self.layout.anchor_x = LEFT
+        self.layout.anchor_y = CENTER
+
+        self._document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
+                                              font_size=DEFAULT_FONT[1],
+                                              color=four_byte(color)))
+
+        self.window.push_handlers(
+            self.on_text,
+            self.on_text_motion
+        )
+
+    def _get_document(self):
+        """Get the current document of the entry.
+
+        returns: pyglet.text.document.UnformattedDocument
+        """
+
+        return self.layout.document
+
+    def _set_document(self, document):
+        """Set the current document of the entry.
+
+        document - new document of entry
+
+        parameters: pyglet.text.document.UnformattedDocument
+        """
+
+        self.layout.document = document
+
+    def _get_text(self):
+        """Return the text of the entry.
+
+        returns: str
+        """
+
+        return self.document.text
+
+    def _set_text(self, text):
+        """Set the text of the entry.
+
+        text - new text to be displayed. This can be a string or a tuple
+        change_index - index is changed after text input. If True, the index
+                       is set to the end of the entry.
+
+        parameters: str or tuple
+        """
+
+        if isinstance(text, Tuple):
+            # self.document._delete_text(0, self.max)
+            # self.document._insert_text(0, text[0], None)
+            self.document.text = text
+
+            if text[1]:
+                # Put the caret to the end
+                self.index = self.max
+
+            return
+
+        # self.document._delete_text(0, self.max)
+        # self.document._insert_text(0, text, None)
+        self.document.text = text
+
+    def _get_x(self):
+        """Get the x position of the entry.
+
+        returns: int
+        """
+
+        return self.image.x
+
+    def _set_x(self, x):
+        """Set the x position of the entry.
+
+        x - new x position of the entry
+
+        parameters: int
+        """
+
+        self.layout.x = self.x - self.layout.width / 2
+        self.image.x = x
+
+    def _get_y(self):
+        """Get the y position of the entry.
+
+        returns: int
+        """
+
+        return self.image.y
+
+    def _set_y(self, y):
+        """Set the y position of the entry.
+
+        y - new y position of the entry
+
+        parameters: int
+        """
+
+        self.layout.y = y
+        self.image.y = y
+
+    def _get_index(self):
+        """Return the index of the current caret position within the
+        document.
+
+        returns: int
+        """
+
+        return self.caret.position
+
+    def _set_index(self, index):
+        """Set the index of the current caret position within the document.
+
+        index - new index of the caret position
+
+        parameters: int
+        """
+
+        self.caret.position = index
+
+    def _get_selection(self):
+        """Get the selection indices of the entry, with the start and end as
+        a tuple.
+
+        (start, end)
+
+        returns: tuple (int, int), (start, end)
+        """
+
+        return (
+                self.layout.selection_start,
+                self.layout.selection_end,
+                self.text[
+                    self.layout.selection_start : self.layout.selection_end
+                ]
+               )
+
+    def _set_selection(self, selection):
+        """Set the selection indices of the entry, which are defined with
+        the property layout_colors.
+
+        selection - tuple of selection indices (start, end)
+
+        parameters: tuple
+        """
+
+        self.caret.mark = selection[1]
+
+        self.layout.selection_start = selection[0]
+        self.layout.selection_end = selection[1]
+
+    def _get_layout_colors(self):
+        """Get the layout colors of the entry. This will return a tuple of
+        three colors defined by _set_layout_color. The selection background
+        defaults to (46, 106, 197).
+
+        (selection, caret, text)
+
+        returns: tuple (list, list, list)
+        """
+
+        return (
+                self.layout.selection_background_color,
+                self.caret.color,
+                self.layout.selection_color
+                )
+
+    def _set_layout_colors(self, colors):
+        """Set the layout colors of the entry.
+
+        colors - tuple of three colors. The first item is the background
+                color of the selection, while the second item is the caret
+                color. The third item is the color of the text selected.
+
+        parameters: tuple (selection, caret, text)
+        """
+
+        self.layout.selection_background_color = colors[0]
+        self.layout.selection_color = colors[2]
+
+        self.caret.color = colors[1]
+
+    text = property(_get_text, _set_text)
+    x = property(_get_x, _set_x)
+    y = property(_get_y, _set_y)
+    document = property(_get_document, _set_document)
+    index = property(_get_index, _set_index)
+    selection = property(_get_selection, _set_selection)
+    layout_colors = property(_get_layout_colors, _set_layout_colors)
+
+    def blink(self, delta):
+        """The caret toggles between white and black colors. This is called
+        every 0.5 seconds, and only when the caret has focus.
+
+        delta - delta time in seconds since the function was last called.
+                This varies about 0.5 seconds give or take, because of
+                calling delay, lags, and other inefficiencies.
+
+        parameters: float
+        """
+
+        if not self.caret._list.colors[3] or \
+            not self.caret._list.colors[7]:
+            alpha = 255
+        else:
+            alpha = 0
+
+        self.caret._list.colors[3] = alpha
+        self.caret._list.colors[7] = alpha
+
+    def insert(self, index, text, change_index=True):
+        """Insert some text at a given index one character after the index.
+
+        >>> entry.text = "Hello!"
+        >>> entry.insert(6, " world")
+        >>> entry.text
+        "Hello world!"
+
+        "Hello world!"
+              ^^^^^^
+              678...
+
+        index - index of the text addition
+        text - text to be added
+        change_index - index is updated to the end of the addition. This value
+                       usually just needs to be left where it is. Defaults to
+                       True.
+
+        parameters: int, str, bool
+        """
+
+        # self.text = insert(index, self.text, text)
+
+        self.document._insert_text(index, text, None)
+
+        if change_index:
+            self.index = self.index + len(text)
+
+    def delete(self, start, end):
+        """Delete some text at a start and end index, one character after the
+        start position and a character after the end position
+
+        >>> entry.text = "Hello world!"
+        >>> entry.delete(5, 10)
+        >>> entry.text
+        "Hello!"
+
+        "Hello world!"
+              ^^^^^^
+              6... 11
+
+        start - start of the text to be deleted
+        end - end of the text to be deleted
+
+        parameters: int, int
+        """
+
+        # self.text = delete(start, end, self.text)
+
+        self.document._delete_text(start, end)
+
+    def draw(self):
+        """Draw the entry. The layout is drawn with pyglet rendering.
+
+        1. Image component
+        2. Layout
+        """
+
+        self.component = self.image
+
+    def on_key(self, keys, modifiers):
+        """A key is pressed. This is used for keyboard shortcuts.
+
+        keys - key pressed
+        modifiers - modifier pressed
+
+        parameters: int (32-bit), int (32-bit)
+        """
+
+        if modifiers & CONTROL:
+            if keys == V:
+                self.insert(self.index, clipboard_get(), change_index=True)
+            elif keys == C:
+                clipboard_append(self.selection[2])
+            if keys == X:
+                clipboard_append(self.selection[2])
+                self.caret._delete_selection()
+            elif keys == A:
+                self.index = 0
+                self.selection = (0, self.length, self.text)
+
+    def on_focus(self):
+        """The entry has focus, activating events. This activates the caret
+        and stops a few errors.
+        """
+
+        if self.text == self.default:
+            self.text = ""
+            self.index = 0
+            self.mark = None
+
+    def on_text(self, text):
+        """The entry has text input. The entry adds text to the end.
+        Internally, the entry does a few things:
+
+            - Remove all selected text
+            - Update the caret position
+            - Appends text to the end of the layout
+
+        text - text inputed by the user
+
+        parameters: str
+        """
+
+        if self.focus:
+            self.caret.on_text(text)
+
+    def on_text_motion(self, motion):
+        """The entry has caret motion. This can be moving the caret's
+        position to the left with the Left key, deleting a character
+        previous with the Backspace key, and more.
+
+        motion - motion used by the user. This can be one of many motions,
+                 defined by keyboard constants found in the keyboard module.
+
+                 MOTION_LEFT                MOTION_RIGHT
+                 MOTION_UP                  MOTION_DOWN
+                 MOTION_NEXT_WORD           MOTION_PREVIOUS_WORD
+                 MOTION_BEGINNING_OF_LINE   MOTION_END_OF_LINE
+                 MOTION_NEXT_PAGE           MOTION_PREVIOUS_PAGE
+                 MOTION_BEGINNING_OF_FILE   MOTION_END_OF_FILE
+                 MOTION_BACKSPACE           MOTION_DELETE
+                 MOTION_COPY                MOTION_PASTE
+
+                 You can get the list of all text motions with
+                 motions_string() in the keyboard module.
+
+        parameters: int (32-bit)
+        """
+
+        if self.focus:
+            try:
+                self.caret.on_text_motion(motion)
+            except AssertionError: # assert self.glyphs
+                pass
+
+    def on_text_select(self, motion):
+        """Some text in the entry is selected. When this happens, the
+        selected text will have a blue background to it. Moving the caret
+        with a text motion removes the selection (does not remove the text).
+
+        NOTE: this is not called with caret mouse selections. See on_press.
+
+        motion - motion used by the user. These can be made with the user.
+
+                 SHIFT + LEFT               SHIFT + RIGHT
+                 SHIFT + UP                 SHIFT + DOWN
+                 CONTROL + SHIFT + LEFT     CONTROL + SHIFT + RIGHT
+
+        parameters: int (32-bit)
+        """
+
+        if self.focus:
+            self.caret.on_text_motion_select(motion)
+
+            self.index = self.caret.position
+
+    def on_press(self, x, y, buttons, modifiers):
+        """The entry is pressed. This will do a number of things.
+
+            - The caret's position is set to the nearest character.
+            - If text is selected, the selection will be removed.
+            - If the Shift key is being held, a selection will be created
+              between the current caret index and the closest character to
+              the mouse.
+            - If two clicks are made within 0.5 seconds (double-click), the
+              current word is selected.
+            - If three clicks are made within 0.5 seconds (triple-click), the
+              current paragraph is selected.
+
+        x - x position of the press
+        y - y position of the press
+        buttons - buttons that were pressed with the mouse
+        modifiers - modifiers being held down
+
+        parameters: int, int, int (32-bit), int (32-bit)
+        """
+
+        _x, _y = x - self.layout.x, y - self.layout.y
+
+        self.caret.on_mouse_press(x, y, buttons, modifiers)
+
+    def on_drag(self, x, y, dx, dy, buttons, modifiers):
+        """The user dragged the mouse when it was pressed. This can
+        create selections.
+
+        x - x position of the current position
+        y - y position of the current position
+        dx - movement in x vector from the last position
+        dy - movement in y vector from the last position
+
+        buttons - buttons that were dragged with the mouse
+        modifiers - modifiers being held down
+
+        parameters: int, int, float, float, int (32-bit), int (32-bit)
+        """
+
+        _x, _y = x - self.layout.x, y - self.layout.y
+
+        if self.press:
+            self.caret.on_mouse_drag(_x, _y, dx, dy, buttons, modifiers)
+
+            self.index = self.caret.position
+        else:
+            if self.focus:
+                self.caret.on_mouse_drag(_x, _y, dx, dy, buttons, modifiers)
+
+                self.index = self.caret.position
+
+    def update(self):
+        if self.focus:
+            if not self.blinking:
+                schedule(self.blink, ENTRY_BLINK_INTERVAL)
+
+                self.blinking = True
+
+        else:
+            self.index = 0
+            self.mark = None
+            self.blinking = False
+
+            unschedule(self.blink)
 
 class Combobox(Widget, EventDispatcher):
 
@@ -2985,7 +3829,7 @@ class Combobox(Widget, EventDispatcher):
 
 class Pushable(Widget):
     """Pushable widget to invoke and call commands. This is an extended version
-    of the Button and allows more modifications.
+    of the button and allows more modifications.
 
     TODO: add specifying border properties (left, right, top, bottom)
     """
@@ -2996,18 +3840,18 @@ class Pushable(Widget):
                  **kwargs
                 ):
 
-        """Initialize a Button. A Button has two components: an Image and a
-        Label. You can customize the Button's images and display by changing
+        """Initialize a button. A button has two components: an Image and a
+        Label. You can customize the button's images and display by changing
         its normal_image, hover_image, press_image, and disable_image
         properties, but it is recommended to use the CustomButton widget.
 
-        text - text to be displayed on the Button
-        x - x position of the Button
-        y - y position of the Button
-        command - command to be invoked when the Button is called
+        text - text to be displayed on the button
+        x - x position of the button
+        y - y position of the button
+        command - command to be invoked when the button is called
         parameters - parameters of the callable when invoked
-        image - image of the Button as an Image
-        font - font of the Button
+        image - image of the button as an Image
+        font - font of the button
 
         The last parameter is for parameters of the Image.
 
@@ -3036,7 +3880,7 @@ class Pushable(Widget):
         self.disable_image = load_texture(images[1])
 
     def _get_x(self):
-        """Get the x position of the Button.
+        """Get the x position of the button.
 
         returns: int
         """
@@ -3044,9 +3888,9 @@ class Pushable(Widget):
         return self.image.x
 
     def _set_x(self, x):
-        """Set the x position of the Button.
+        """Set the x position of the button.
 
-        x - new x position of the Button
+        x - new x position of the button
 
         parameters: int
         """
@@ -3054,7 +3898,7 @@ class Pushable(Widget):
         self.image.x = x
 
     def _get_y(self):
-        """Get the y position of the Button.
+        """Get the y position of the button.
 
         returns: int
         """
@@ -3062,9 +3906,9 @@ class Pushable(Widget):
         return self.image.y
 
     def _set_y(self, y):
-        """Set the y position of the Button.
+        """Set the y position of the button.
 
-        y - new y position of the Button
+        y - new y position of the button
 
         parameters: int
         """
@@ -3075,8 +3919,8 @@ class Pushable(Widget):
     y = property(_get_y, _set_y)
 
     def invoke(self):
-        """Invoke the Button. This switches its image to a pressed state
-        calls the command with the specified parameters. If the Button is
+        """Invoke the button. This switches its image to a pressed state
+        calls the command with the specified parameters. If the button is
         disabled this will do nothing.
         """
 
@@ -3091,11 +3935,11 @@ class Pushable(Widget):
             self.command()
 
     def draw(self):
-        """Draw the Button. The component of the Button is the image, which takes
+        """Draw the button. The component of the button is the image, which takes
         all of the collision points.
 
-        1. Image - background image of the Button
-        2. Label - text of the Button
+        1. Image - background image of the button
+        2. Label - text of the button
         """
 
         # Update Label properties
@@ -3107,7 +3951,7 @@ class Pushable(Widget):
         self.component = self.image
 
     def on_press(self, x, y, buttons, modifiers):
-        """The Button is pressed. This invokes its command if the mouse button
+        """The button is pressed. This invokes its command if the mouse button
         is the left one.
 
         TODO: add specifying proper mouse button in settings
@@ -3125,7 +3969,7 @@ class Pushable(Widget):
 
     def on_key(self, keys, modifiers):
         """A key is pressed. This is used for keyboard shortcuts when the
-        Button has focus.
+        button has focus.
 
         keys - key pressed
         modifiers - modifier pressed
@@ -3145,7 +3989,7 @@ class Pushable(Widget):
                 self.invoke()
 
     def update(self):
-        """Update the Button. This registers events and updates the Button
+        """Update the button. This registers events and updates the button
         image.
         """
 
@@ -3163,20 +4007,20 @@ class Pushable(Widget):
 
 
 class Shape(Widget):
-    """Primitive drawing shape. This is subclassed by all shapes."""
+    """Primitive drawing Shape. This is subclassed by all shapes."""
 
     def __init__(self):
-        """Initialize a Shape. When using a Shape, be sure to create vertex
+        """Initialize a shape. When using a shape, be sure to create vertex
         lists from pyglet.graphics.vertex_list(), then draw them with pyglet
         rendering. Refer to the pyglet.shapes module for more information.
 
         A shape should not need an update function. Instead, put all of the
         properties as function-defined ones. This saves time and GPU. Also,
         instead of having x and y properties seperately, use a Point or a
-        PointList.
+        Pointlist.
 
         A shape should look like one from the pyglet.shapes module, but should
-        be drawn with pyglet rendering. It should subclass a Widget or a Shape,
+        be drawn with pyglet rendering. It should subclass a widget or a shape,
         but that is not necessary. If you do, however, keep in mind that the
         events of a widget will be dispatched, like draw and update. You can
         also add the shape's vertex list to a pyglet.graphics.Batch() for
@@ -3989,10 +4833,10 @@ class MyWindow(Window):
             300,
             size=100)
 
-        self.entry = Entry(
-            300,
-            160,
-        )
+        # self.entry = Text(
+        #     300,
+        #     160,
+        # )
             #["apple", "banana", "mango", "orange"])
 
         # self.circle = Star(
@@ -4004,6 +4848,12 @@ class MyWindow(Window):
         #     color=BLUE_YONDER,
         #     opengl_error=False)
 
+        self.circle = Star(
+            100, 150,
+            50, 29000000000000005,
+            spikes=6, color=BLUE_YONDER,
+            opengl_error=False
+        )
         for i in range(1, 10):
             Label(
             None,
@@ -4037,5 +4887,4 @@ if __name__ == "__main__":
     window = MyWindow(" ", 500, 400)
 
     from pyglet.app import run
-    run(1/20000)
-
+    run(1/2000)
