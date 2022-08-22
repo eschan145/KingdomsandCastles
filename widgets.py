@@ -143,11 +143,11 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
     """
 
     default_style = {
-        'font_name': 'Montserrat',
-        'font_size': 12,
-        'margin_bottom': '12pt',
-        'bold': False,
-        'italic': False,
+        "font_name": "Montserrat",
+        "font_size": 12,
+        "margin_bottom": "12pt",
+        "bold": False,
+        "italic": False,
     }
 
     font_sizes = {
@@ -176,13 +176,13 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
         self.strip_leading_space = True
         self.block_begin = True
         self.need_block_begin = False
-        self.element_stack = ['_top_block']
+        self.element_stack = ["_top_block"]
         self.in_metadata = False
         self.in_pre = False
 
         # Set default style
 
-        self.push_style('_default', self.default_style)
+        self.push_style("_default", self.default_style)
 
         self.feed(text)
         self.close()
@@ -202,7 +202,7 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
         """
 
         if self.need_block_begin:
-            self.add_text('\n')
+            self.add_text("\n")
             self.block_begin = True
             self.need_block_begin = False
 
@@ -218,19 +218,135 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
         if self.in_pre:
             self.add_text(data)
         else:
-            data = _whitespace_re.sub(' ', data)
+            data = _whitespace_re.sub(" ", data)
             if data.strip():
                 self.prepare_for_data()
                 if self.block_begin or self.strip_leading_space:
                     data = data.lstrip()
                     self.block_begin = False
                 self.add_text(data)
-            self.strip_leading_space = data.endswith(' ')
+            self.strip_leading_space = data.endswith(" ")
 
     def handle_starttag(self, tag, case_attrs):
         """Handle the start of tags for all HTML elements. This creates a map
         of all the elements and pushes its style to a pyglet structured text
         decoder. They may be upper or lower case.
+
+        Pyglet uses a subset of HTML 4.01 transitional.
+
+        TODO: make code blocks have a gray background, keyboard blocks with a
+              glowing gray background
+
+        The following elements are currently supported.
+
+        ALIGN B BLOCKQUOTE BR CODE DD DIR DL EM FONT H1 H2 H3 H4 H5 H6 I IMG
+        KBD LI MENU OL P PRE Q STRONG SUB SUP U UL VAR
+
+        The mark (bullet or number) of a list item is separated from the body
+        of the list item with a tab, as the pyglet document model does not
+        allow out-of-stream text. This means lists display as expected, but
+        behave a little oddly if edited.
+
+        No style elements are currently supported.
+
+        A description of each tag is found below.
+
+        ALIGN - alignment of the text. This can be LEFT, CENTER, or RIGHT.
+        B - bold or heavy text. This has no parameters, and is defined in
+            Markdown as two asterisks (**). Alias of <strong>.
+        BLOCKQOUTE - a quote of some text. Later, a line drawn on the left side
+                     may be implemented. The left margin is indented by 60
+                     pixels, but can be changed by specifying a padding
+                     parameter. In Markdown, this is a greater than equal sign,
+                     with the level on the number of signs.
+        BR - a line break. This draws a horizontal line below the text.
+        CODE - a code block. This is displayed as ` for single-line code and
+               ``` for multiline code blocks in Markdown. This is an alias for
+               <pre>
+        DD - description, definition, or value for a item
+        DIR - unordered list. This takes a type parameter, either CIRCLE or
+              SQUARE. It defaults to a bullet point. Alias for <ul> and <menu>.
+        DL - description list. This just sets the bottom margin to nothing.
+        EM - italic or slanted text. This has no parameters. Alias for <i> and
+             <var>.
+        FONT - font and style of the text. It takes several parameters.
+               family       font family of the text. This must be a pyglet
+                            loaded font.
+               size         size changes of the text. If negative the text will
+                            shrink, and if positive the text will be enlarged.
+                            If not specified the text size will be 3.
+               real_size    actual font size of the text. This only accepts
+                            positive values.
+               color        font color of the text in RGBA format
+
+        H1 - largest HTML heading. This sets the font size to 24 points. All
+             headings except <h6> are bold.
+        H2 - second largest HTML heading. This sets the font size to 18 points.
+        H3 - third largest HTML heading. This sets the font size to 16 points.
+        H4 - fourth largest HTML heading. This sets the font size to 14 points.
+        H5 - fifth largest HTML heading. This sets the font size to 12 points.
+        H6 - a copy of <h5>, but with italic instead of bold text
+
+        I - italic or slanted text. This has no parameters. Alias for <em> and
+            <var>.
+        IMG - display an image. This takes several parameters.
+              filepath      filepath of the image. This is not a loaded image.
+              width         width of the image. This must be set to a value
+                            greater than 0, or the image will not be rendered.
+              height        height of the image. This must be set to a value
+                            greater than 0, or the image will not be rendered.
+        KBD - display keyboard shortcut
+        LI - display a list item. This should be inserted in a ordered or
+             unordered list, like this.
+
+             <ul> My special list
+                 <li> My first list item </li>
+                 <li> My second list item </li>
+             </ul>
+
+        MENU - unordered list. This takes a type parmeter, either CIRCLE or
+               SQUARE. It defaults to a bullet point. Alias for <dir> and <ul>.
+        OL - ordered list. Instead of having symbols, this uses sequential
+             titles. Parameters and options are listed below.
+             start          start title of ordered list. (int)
+             format         list format. Pyglet's ordered list supports
+                            1       Decimal arabic (1, 2, 3)
+                            a       Lowercase alphanumeric (a, b, c)
+                            A       Uppercase alphanumeric (A, B, C)
+                            i       Lowercase roman (i, ii, i)
+                            I       Uppercase roman (I, II, III)
+
+                            These values can contain prefixes and suffixes,
+                            like "1.", "(1)", and so on. If the format is
+                            invalid a question mark will be used instead.
+        P - paragraph. This is different that just plain HTML text, as it will
+            be formatted to the guidelines of a paragraph. This takes a align
+            parameter, either LEFT, CENTER, or RIGHT. Defaults to LEFT.
+        PRE - a code block. This is displayed as ` for single-line code and
+              ``` for multiline code blocks in Markdown. This is an alias to
+              <code>
+        Q - inline quotation element. This adds formal quotation marks around
+            enclosed text. NOTE: not a regular ".
+        STRONG - bold or heavy text. This has no parameters, and is defined in
+                 Markdown as two asterisks (**). Alias of <b>
+        SUB - subscript text. Enclosed text is offset by points given in the
+              baseline parameter. This has two parameters.
+              size          size decrement of the enclosed text. This is the
+                            amount the text is leveled down.
+              baseline      offset of the enclosed text. This should be
+                            negative. Defaults to -3 points.
+        SUP - superscript text. Enclosed text is offset by points given in the
+              baseline parameter. This has two parameters.
+              size          size increment of the enclosed text. This is the
+                            amount the text is leveled up.
+              baseline      offset of the enclosed text. This should be
+                            positive. Defaults to 3 points.
+        U - underlined text. This can take an optional color argument for the
+            color of the underline. If not specified this defaults to BLACK.
+        UL - unordered list. This takes a type parameter, either CIRCLE or
+             SQUARE. It defaults to a bullet point. Alias for <dir> and<menu>.
+        VAR -  italic or slanted text. This has no parameters. Alias for <i>
+               and <em>.
         """
 
         if self.in_metadata:
@@ -238,145 +354,211 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
 
         element = tag.lower()
         attrs = {}
+
         for key, value in case_attrs:
             attrs[key.lower()] = value
 
         if element in _metadata_elements:
             self.in_metadata = True
+
         elif element in _block_elements:
-            # Pop off elements until we get to a block container.
+            # Pop off elements until we get to a block container
+
             while self.element_stack[-1] not in _block_containers:
                 self.handle_endtag(self.element_stack[-1])
+
             if not self.block_begin:
-                self.add_text('\n')
+                self.add_text("\n")
+
                 self.block_begin = True
                 self.need_block_begin = False
+
         self.element_stack.append(element)
 
         style = {}
-        if element in ('b', 'strong'):
-            style['bold'] = True
-        elif element in ('i', 'em', 'var'):
-            style['italic'] = True
-        elif element in ('tt', 'code', 'samp', 'kbd'):
-            style['font_name'] = 'Courier New'
-        elif element == 'u':
-            color = self.current_style.get('color')
+
+        if element in ("b", "strong"):
+            style["bold"] = True
+
+        elif element in ("i", "em", "var"):
+            style["italic"] = True
+
+        elif element in ("tt", "code", "kbd"):
+            style["font_name"] = "Courier New"
+
+        elif element == "u":
+            color = self.current_style.get("color")
+
             if color is None:
-                color = [0, 0, 0, 255]
-            style['underline'] = color
-        elif element == 'font':
-            if 'face' in attrs:
-                style['font_name'] = attrs['face'].split(',')
-            if 'size' in attrs:
-                size = attrs['size']
+                color = attrs.get("color") or [0, 0, 0, 255]
+
+            style["underline"] = color
+
+        elif element == "font":
+            if "family" in attrs:
+                style["font_name"] = attrs["family"].split(",")
+
+            if "size" in attrs:
+                size = attrs["size"]
+
                 try:
-                    if size.startswith('+'):
+                    if size.startswith("+"):
                         size = self._font_size_stack[-1] + int(size[1:])
-                    elif size.startswith('-'):
+
+                    elif size.startswith("-"):
                         size = self._font_size_stack[-1] - int(size[1:])
+
                     else:
                         size = int(size)
+
                 except ValueError:
                     size = 3
+
                 self._font_size_stack.append(size)
+
                 if size in self.font_sizes:
-                    style['font_size'] = self.font_sizes.get(size, 3)
-            elif 'real_size' in attrs:
-                size = int(attrs['real_size'])
+                    style["font_size"] = self.font_sizes.get(size, 3)
+
+            elif "real_size" in attrs:
+                size = int(attrs["real_size"])
+
                 self._font_size_stack.append(size)
-                style['font_size'] = size
+                style["font_size"] = size
+
             else:
                 self._font_size_stack.append(self._font_size_stack[-1])
-            if 'color' in attrs:
+
+            if "color" in attrs:
                 try:
-                    style['color'] = _parse_color(attrs['color'])
+                    style["color"] = _parse_color(attrs["color"])
+
                 except ValueError:
                     pass
-        elif element == 'sup':
-            size = self._font_size_stack[-1] - 1
-            style['font_size'] = self.font_sizes.get(size, 1)
-            style['baseline'] = '3pt'
-        elif element == 'sub':
-            size = self._font_size_stack[-1] - 1
-            style['font_size'] = self.font_sizes.get(size, 1)
-            style['baseline'] = '-3pt'
-        elif element == 'h1':
-            style['font_size'] = 24
-            style['bold'] = True
-            style['align'] = 'center'
-        elif element == 'h2':
-            style['font_size'] = 18
-            style['bold'] = True
-        elif element == 'h3':
-            style['font_size'] = 16
-            style['bold'] = True
-        elif element == 'h4':
-            style['font_size'] = 14
-            style['bold'] = True
-        elif element == 'h5':
-            style['font_size'] = 12
-            style['bold'] = True
-        elif element == 'h6':
-            style['font_size'] = 12
-            style['italic'] = True
-        elif element == 'br':
-            self.add_text(u'\u2028')
+
+        elif element == "sup":
+            size = self._font_size_stack[-1] - (attrs.get("size") or 1)
+
+            style["font_size"] = self.font_sizes.get(size, 1)
+            style["baseline"] = attrs.get("baseline") or "3pt"
+
+        elif element == "sub":
+            size = self._font_size_stack[-1] - (attrs.get("size") or 1)
+
+            style["font_size"] = self.font_sizes.get(size, 1)
+            style["baseline"] = attrs.get("baseline") or "-3pt"
+
+        elif element == "h1":
+            style["font_size"] = 24
+            style["bold"] = True
+
+        elif element == "h2":
+            style["font_size"] = 18
+            style["bold"] = True
+
+        elif element == "h3":
+            style["font_size"] = 16
+            style["bold"] = True
+
+        elif element == "h4":
+            style["font_size"] = 14
+            style["bold"] = True
+
+        elif element == "h5":
+            style["font_size"] = 12
+            style["bold"] = True
+
+        elif element == "h6":
+            style["font_size"] = 12
+            style["italic"] = True
+
+        elif element == "br":
+            self.add_text(u"\u2028")
+
             self.strip_leading_space = True
-        elif element == 'p':
-            if attrs.get('align') in ('left', 'center', 'right'):
-                style['align'] = attrs['align']
-        elif element == 'center':
-            style['align'] = 'center'
-        elif element == 'pre':
-            style['font_name'] = 'Courier New'
-            style['margin_bottom'] = 0
+
+        elif element == "p":
+            if attrs.get("align") in ("left", "center", "right"):
+                style["align"] = attrs["align"]
+
+        elif element == "align":
+            style["align"] = attrs.get("type")
+
+        elif element == "pre":
+            style["font_name"] = "Courier New"
+            style["margin_bottom"] = 0
+
             self.in_pre = True
-        elif element == 'blockquote':
-            left_margin = self.current_style.get('margin_left') or 0
-            right_margin = self.current_style.get('margin_right') or 0
-            style['margin_left'] = left_margin + 60
-            style['margin_right'] = right_margin + 60
-        elif element == 'q':
-            self.handle_data(u'\u201c')
-        elif element == 'ol':
+
+        elif element == "blockquote":
+            padding = attrs.get("padding") or 60
+
+            left_margin = self.current_style.get("margin_left") or 0
+            right_margin = self.current_style.get("margin_right") or 0
+
+            style["margin_left"] = left_margin + padding
+            style["margin_right"] = right_margin + padding
+
+        elif element == "q":
+            self.handle_data(u"\u201c")
+
+        elif element == "ol":
             try:
-                start = int(attrs.get('start', 1))
+                start = int(attrs.get("start", 1))
             except ValueError:
                 start = 1
-            format = attrs.get('type', '1') + '.'
+
+            format = attrs.get("format", "1") + "."
+
             builder = OrderedListBuilder(start, format)
+
             builder.begin(self, style)
             self.list_stack.append(builder)
-        elif element in ('ul', 'dir', 'menu'):
-            type = attrs.get('type', 'disc').lower()
-            if type == 'circle':
-                mark = u'\u25cb'
-            elif type == 'square':
-                mark = u'\u25a1'
+
+        elif element in ("ul", "dir", "menu"):
+            type = attrs.get("type", "disc").lower()
+
+            if type == "circle":
+                mark = u"\u25cb"
+            elif type == "square":
+                mark = u"\u25a1"
             else:
-                mark = u'\u25cf'
+                if type:
+                    mark = type
+                else:
+                    mark = u"\u25cf"
+
             builder = UnorderedListBuilder(mark)
+
             builder.begin(self, style)
             self.list_stack.append(builder)
-        elif element == 'li':
+
+        elif element == "li":
             self.list_stack[-1].item(self, style)
             self.strip_leading_space = True
-        elif element == 'dl':
-            style['margin_bottom'] = 0
-        elif element == 'dd':
-            left_margin = self.current_style.get('margin_left') or 0
-            style['margin_left'] = left_margin + 30
-        elif element == 'img':
-            image = self.get_image(attrs.get('src'))
+
+        elif element == "dl":
+            style["margin_bottom"] = 0
+
+        elif element == "dd":
+            left_margin = self.current_style.get("margin_left") or 0
+            style["margin_left"] = left_margin + 30
+
+        elif element == "img":
+            image = self.get_image(attrs.get("filepath"))
+
             if image:
-                width = attrs.get('width')
+                width = attrs.get("width")
+
                 if width:
                     width = int(width)
-                height = attrs.get('height')
+
+                height = attrs.get("height")
+
                 if height:
                     height = int(height)
+
                 self.prepare_for_data()
+
                 self.add_element(ImageElement(image, width, height))
                 self.strip_leading_space = False
 
@@ -400,13 +582,13 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
             self.block_begin = False
             self.need_block_begin = True
 
-        if element == 'font' and len(self._font_size_stack) > 1:
+        if element == "font" and len(self._font_size_stack) > 1:
             self._font_size_stack.pop()
-        elif element == 'pre':
+        elif element == "pre":
             self.in_pre = False
-        elif element == 'q':
-            self.handle_data(u'\u201d')
-        elif element in ('ul', 'ol'):
+        elif element == "q":
+            self.handle_data(u"\u201d")
+        elif element in ("ul", "ol"):
             if len(self.list_stack) > 1:
                 self.list_stack.pop()
 
@@ -418,13 +600,14 @@ class HTMLDecoder(HTMLParser, StructuredTextDecoder):
             self.handle_data(chr(entities.name2codepoint[name]))
 
     def handle_charref(self, name):
-        """Handle character references from the HTML document.
+        """Handle character references from the HTML document. This is used
+        internally for the pyglet document formatter.
         """
 
         name = name.lower()
 
         try:
-            if name.startswith('x'):
+            if name.startswith("x"):
                 self.handle_data(chr(int(name[1:], 16)))
             else:
                 self.handle_data(chr(int(name)))
@@ -756,6 +939,11 @@ class Widget(Sprite, EventDispatcher):
     arcade Shape to its ShapeElementList, in the shapes property. Key state
     handlers are aleady built-in.
 
+    You can access the widget's state by properties. Several built-in states
+    are supported: normal, hover, press, disable, and focus. A disabled widget
+    cannot have focus. It is highly not recommended to change any of these
+    properties, as these may lead to drawing glitches.
+
     TODO: of course, there are many enhancements and other things that need to
           be worked on for the built-in widgets. If you would like to work on
           these post your enhancements in the discussions.
@@ -854,6 +1042,8 @@ class Widget(Sprite, EventDispatcher):
 
         self.frames = 0
 
+        self.last_press = ()
+
         self.keys = Keys()
         self.shapes = None
 
@@ -873,31 +1063,29 @@ class Widget(Sprite, EventDispatcher):
             self.on_update
         )
 
-    def _check_collision(self, x, y):
+    def _check_collision(self, point):
         """Check if a x and y position exists within the widget's hit box. This
         is an alternative to check_collision, and should only be used if you
         are not using any components (ex. label widget).
 
-        TODO: replace x and y parameters with a Point
+        TODO: replace x and y parameters with Point (DONE)
 
-        x - x position of point
-        y - y position of point
+        point - point to check for collision
 
         parameters: int, int
         returns: bool
         """
 
-        return (0 < x - self.x < self.width and
-                0 < y - self.y < self.height)
+        return (0 < point.x - self.x < self.width and
+                0 < point.y - self.y < self.height)
 
-    def check_collision(self, x, y):
+    def check_collision(self, point):
         """Check if a x and y position exists within the widget's hit box. This
         should be used if you are using components.
 
-        TODO: replace x and y parameters with a Point
+        TODO: replace x and y parameters with Point (DONE)
 
-        x - x position of point
-        y - y position of point
+        point - point to check for collision
 
         parameters: int, int
         returns: bool
@@ -907,11 +1095,11 @@ class Widget(Sprite, EventDispatcher):
            self._left and \
            self._top and \
            self._bottom:
-            return x > self._left and x < self._right and \
-                   y > self._bottom and y < self._top
+            return point.x > self._left and point.x < self._right and \
+                   point.y > self._bottom and point.y < self._top
 
-        return x > self.left and x < self.right and \
-               y > self.bottom and y < self.top
+        return point.x > self.left and point.x < self.right and \
+               point.y > self.bottom and point.y < self.top
 
     def draw_bbox(self, width=1, padding=0):
         """Draw the bounding box of the widget. The drawing is cached in a
@@ -1012,7 +1200,7 @@ class Widget(Sprite, EventDispatcher):
         if self.disable:
             return
 
-        if self.check_collision(x, y):
+        if self.check_collision(Point(x, y)):
             self.hover = True
 
             self.dispatch_event("on_hover", x, y, dx, dy)
@@ -1033,7 +1221,9 @@ class Widget(Sprite, EventDispatcher):
         if self.disable:
             return
 
-        if self.check_collision(x, y):
+        self.last_press = Point(x, y)
+
+        if self.check_collision(Point(x, y)):
             self.press = True
             self.focus = True
 
@@ -1056,9 +1246,6 @@ class Widget(Sprite, EventDispatcher):
 
         self.press = False
 
-        if not self.check_collision(x, y):
-            self.focus = False
-
         self.drag = False
 
         self.dispatch_event("on_release", x, y, buttons, modifiers)
@@ -1079,9 +1266,13 @@ class Widget(Sprite, EventDispatcher):
         if self.disable:
             return
 
+        if not self.check_collision(Point(x, y)):
+            if not self.check_collision(self.last_press):
+                return
+
         self.drag = True
 
-        if self.check_collision(x, y):
+        if self.check_collision(Point(x, y)):
             self.dispatch_event("on_drag", x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_scroll(self, x, y, sx, sy):
@@ -1098,7 +1289,7 @@ class Widget(Sprite, EventDispatcher):
         if self.disable:
             return
 
-        if self.check_collision(x, y):
+        if self.check_collision(Point(x, y)):
             if self.disable:
                 return
 
@@ -1245,6 +1436,11 @@ class Widget(Sprite, EventDispatcher):
         implemented. You could make a variable that gets the coordinates of each
         mouse press, then in the on_drag event, gets the last press coordinates.
         This sets the drag property to True.
+
+        This event is only dispatched if the mouse started on the widget. It is
+        not cancelled if the mouse moves outside of the widget, for as long as
+        it starts in it, it works. You can get the start point with the
+        last_press property.
 
         x - x position of mouse during drag
         y - y position of mouse during drag
@@ -1560,7 +1756,7 @@ class Label(Widget):
         self.label.end_update()
 
     def _get_document(self):
-        """Get the document of the Label.
+        """Get the document of the label.
 
         returns: str
         """
@@ -1568,7 +1764,7 @@ class Label(Widget):
         return self.label.document
 
     def _set_document(self, document):
-        """Set the document of the Label. This is far less efficient than
+        """Set the document of the label. This is far less efficient than
         modifying the current document, as relayout and recalculating glyphs
         is very costly.
 
@@ -1791,7 +1987,7 @@ class Button(Widget):
         self.image = Image(widgets[f"{colors[0]}_button_normal"], x, y)
         self.label = Label(text, x, y, font=font)
 
-        Widget.__init__(self, (self.image, self.label))
+        Widget.__init__(self)
 
         self.text = text
         self.x = x
@@ -2037,14 +2233,14 @@ class Slider(Widget):
     destination = 0
 
     def __init__(self, text, x, y, colors=BLACK, font=DEFAULT_FONT,
-                 size=10, length=200, padding=50, round=0):
+                 default=0, size=10, length=200, padding=50, round=0):
         """Initialize a slider."""
 
         self.bar = Image(slider_horizontal, x, y)
         self.knob = Image(knob, x, y)
         self.label = Label(text, x, y, font=font)
 
-        Widget.__init__(self, (self.bar, self.knob))
+        Widget.__init__(self)
 
         self.text = text
         self.colors = colors
@@ -2053,6 +2249,8 @@ class Slider(Widget):
         self.length = length
         self.padding = padding
         self.round = round
+
+        self.value = default
 
         self.x = x
         self.y = y
@@ -2324,7 +2522,7 @@ class Toggle(Widget):
 
         self.label = Label(knob, x, y, font=font)
 
-        Widget.__init__(self, (self.bar, self.knob))
+        Widget.__init__(self)
 
         self.text = text
         self.colors = colors
@@ -2492,13 +2690,11 @@ class Toggle(Widget):
         else:
             self.knob.scale = 1
 
-_Caret = Caret
 
-
-class Caret(_Caret):
+class Caret(Caret):
     """Caret used for pyglet.text.IncrementalTextLayout."""
 
-    BLINK_INTERVAL = 0
+    BLINK_INTERVAL = 0.5
 
     def on_text_motion(self, motion, select=False):
         """The caret was moved or a selection was made with the keyboard.
@@ -2699,24 +2895,24 @@ class Entry(Widget):
 
         self._document = decode_text(text)
 
-        self.layout = IncrementalTextLayout(self._document, 190, 24)
+        self.layout = IncrementalTextLayout(self._document, 190, 24, batch=batch)
 
         self.image = Image(entry_normal, x, y)
         self.caret = Caret(self.layout)
 
-        Widget.__init__(self, (self.image))
+        Widget.__init__(self)
 
         self.x = x
         self.y = y
-        self.default = text
         self.font = font
+        self.default = text
 
         self.layout.anchor_x = LEFT
         self.layout.anchor_y = CENTER
 
         self._document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
-                                              font_size=DEFAULT_FONT[1],
-                                              color=four_byte(color)))
+                                                    font_size=DEFAULT_FONT[1],
+                                                    color=four_byte(color)))
 
         self.window.push_handlers(
             self.on_text,
@@ -2792,7 +2988,7 @@ class Entry(Widget):
         parameters: int
         """
 
-        self.layout.x = self.x - self.layout.width / 2
+        self.layout.x = x - self.layout.width / 2
         self.image.x = x
 
     def _get_y(self):
@@ -2884,8 +3080,8 @@ class Entry(Widget):
         """Set the layout colors of the entry.
 
         colors - tuple of three colors. The first item is the background
-                color of the selection, while the second item is the caret
-                color. The third item is the color of the text selected.
+                 color of the selection, while the second item is the caret
+                 color. The third item is the color of the text selected.
 
         parameters: tuple (selection, caret, text)
         """
@@ -3023,6 +3219,10 @@ class Entry(Widget):
 
         1. Image component
         2. Layout
+
+        FIXME: there is a bug here. The anchor_x and anchor_y properties of the
+               layout have to be set again and again. This makes performance
+               deadly slow.
         """
 
         self.component = self.image
@@ -3157,7 +3357,7 @@ class Entry(Widget):
 
         _x, _y = x - self.layout.x, y - self.layout.y
 
-        self.caret.on_mouse_press(x, y, buttons, modifiers)
+        self.caret.on_mouse_press(_x, _y, buttons, modifiers)
 
     def on_drag(self, x, y, dx, dy, buttons, modifiers):
         """The user dragged the mouse when it was pressed. This can
@@ -3182,7 +3382,7 @@ class Entry(Widget):
             self.index = self.caret.position
         else:
             if self.focus:
-                self.caret.on_mouse_drag(_x, _y, dx, dy, buttons, modifiers)
+                self.caret.on_mouse_drag(x, y, dx, dy, buttons, modifiers)
 
                 self.index = self.caret.position
 
@@ -3218,15 +3418,14 @@ class Text(Widget):
         self.image = Image(entry_normal, x, y)
         self.caret = Caret(self.layout)
 
-        Widget.__init__(self, (self.image))
+        Widget.__init__(self)
 
         self.x = x
         self.y = y
         self.default = text
         self.font = font
 
-        self.layout.anchor_x = LEFT
-        self.layout.anchor_y = CENTER
+        self.layout.anchor_x
 
         self._document.set_style(0, len(text), dict(font_name=DEFAULT_FONT[0],
                                               font_size=DEFAULT_FONT[1],
@@ -3678,7 +3877,7 @@ class Combobox(Widget, EventDispatcher):
 
         self.buttons = []
 
-        Widget.__init__(self, [self.entry])
+        Widget.__init__(self)
 
         self.x = x
         self.y = y
@@ -3865,7 +4064,7 @@ class Pushable(Widget):
         self.image = Image(images[0], x, y)
         self.label = Label(text, x, y, font=font)
 
-        Widget.__init__(self, (self.image))
+        Widget.__init__(self)
 
         self.text = text
         self.x = x
@@ -4833,10 +5032,10 @@ class MyWindow(Window):
             300,
             size=100)
 
-        # self.entry = Text(
-        #     300,
-        #     160,
-        # )
+        self.entry = Entry(
+            300,
+            160,
+        )
             #["apple", "banana", "mango", "orange"])
 
         # self.circle = Star(
