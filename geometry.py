@@ -5,21 +5,30 @@ TODO: Add more features to Points
       Upgrade collision checks
 """
 
-from arcade import Sprite, SpriteList, get_window, schedule, unschedule
 from cmath import cos, sin
 from math import atan2, degrees, hypot, pow, radians, sqrt
-from operator import pos, neg
+from operator import neg, pos
 from random import random, randrange, uniform
-from typing import Tuple, cast, List
+from re import compile
 from struct import unpack
+from sys import modules
+from typing import List, Tuple, cast
+
+from arcade import Sprite, SpriteList, get_window, unschedule
+
+from color import BLACK
+from constants import CM, IN, MM, PC, PT, PX
 
 points = 0 # Number of points to create unique keysets
 pi = 3.14159265358979
+
+pointlist = []
 
 __all__ = [
            "Point",
            "square",
            "cube",
+           "parse_distance",
            "chance",
            "are_polygons_intersecting",
            "is_point_in_polygon",
@@ -43,6 +52,12 @@ class Point:
     as vectors for gravity, velocity, and more. This was inspired by
     pymunk.vec2d.Vec2d.
 
+    >>> point = Point(100, 100)
+    >>> point.x, point.y
+    100, 100
+    >>> point["name"]
+    1
+
     A Point supports operations, so you can perform many computations with
     Points. Take a look at the below example.
 
@@ -63,13 +78,17 @@ class Point:
     """
 
     def __init__(self, x, y, name=None):
-        """Initialize a named object-oriented Point.
+        """Initialize a named object-oriented Point. Points support opertaions
+        and are rich with features. When creating a Point, you can access its
+        properties by its name and from a list. This way, you don't have to
+        save Points as variables. Take a look at this.
 
-        >>> point = Point(100, 100)
-        >>> point.x, point.y
-        100, 100
-        >>> point["name"]
-        1
+        >>> Point(5, 3, name="My first Point")
+        >>> for point in pointlist:
+                if point.name == "My first Point":
+                    print("Found Point!")
+
+        Points are automatically saved as variables in a list called pointlist.
 
         x - x coordinate of Point
         y - y coordinate of Point
@@ -126,6 +145,12 @@ class Point:
             points += 1
 
             self.name = str(points)
+        else:
+            self.name = name
+
+        global pointlist
+
+        pointlist.append(self)
 
         self.data = {
             "x" : self.x,
@@ -133,7 +158,33 @@ class Point:
             "name" : self.name
         }
 
-        schedule(self.update, 1 / 60)
+    def _get_x(self):
+        """Get the x position of the Point.
+
+        returns: int
+        """
+
+    def _set_x(self, x):
+        """Set the x position of the Point.
+
+        x - x position of the Point
+
+        parameters: int
+        """
+
+    def _get_y(self):
+        """Get the y position of the Point.
+
+        returns: int
+        """
+
+    def _set_y(self, y):
+        """Set the y position of the Point.
+
+        y - y position of the Point
+
+        parameters: int
+        """
 
     def _get_position(self):
         """Get the position of the Point as a tuple (self.x, self.y).
@@ -170,10 +221,13 @@ class Point:
         returns: float
         """
 
-        if self.get_squared_length() == 0:
+        if not self.get_squared_length():
             return 0
+
         return atan2(self.y, self.x)
 
+    # x = property(_get_x, _set_x)
+    # y = property(_get_y, _set_y)
     position = property(_get_position, _set_position)
     length = property(_get_length)
     angle = property(_get_angle)
@@ -404,15 +458,18 @@ class Point:
 
     def get_distance(self, point):
         """Get the distance between another Point. See get_distance for more
-        information.
+        information. You can use a name of a Point for this.
 
         point - Point to get distance
 
-        parameters: Point
+        parameters: Point or str or int
         returns: int - (distance between two points)
         """
 
-        return get_distance(self, point)
+        if isinstance(point, Point):
+            return get_distance(self, point)
+        else:
+            return get_distance(self, pointlist[point])
 
     def is_in_polygon(self, polygon):
         """Check if the x and y coordinates exist in a polygon.
@@ -435,7 +492,7 @@ class Point:
         returns: tuple ((closest, distance))
         """
 
-        return get_closest(self, points)
+        return get_closest(self, list)
 
     def get_squared_length(self):
         """Return the squared length of the vector.
@@ -579,8 +636,10 @@ class Point:
         """
 
         length_squared = point.x * point.x + point.y * point.y
-        if length_squared == 0:
+
+        if not length_squared:
             self.position = (0, 0)
+
         projected_length = self.dot(point)
         new = projected_length / length_squared
 
@@ -607,7 +666,7 @@ class Point:
 
         y = y₁ + (x — x₁) [(y₂ — y₁) ÷ (x₂ — x₁)]
 
-        where
+        where...
         y	   linear interpolation value
         x	   independent variable
         x₁, y₁   values of the function at one point
@@ -630,7 +689,7 @@ class Point:
     def convert_to_basis(self, vector):
         """"Convert the Point to a basis given a vector.
 
-        vector - vector of convertion
+        vector - vector of convertion. This is NOT a Point.
 
         parameters: multi-demensional list [(x, y), (x, y)]
         returns: tuple (self.x, self.y)
@@ -640,6 +699,31 @@ class Point:
         self.y = self.dot(vector[1]) / Point(*vector[1]).get_squared_length()
 
         return self.position
+
+    def svg(self, factor=1, color=None, alpha=None):
+        """Get an SVG (scalable vector graphic) image as a string for the
+        Point.
+
+        factor - scale factor for the SVG circle diameter. Defaults to 1.
+        color - RGB color of the SVG circle as a tuple of three ints. Defaults
+                to None
+        alpha - scale of 0 to 255 for alpha channel of SVG circle. An alpha of
+                255 is completely solid, and an alpha of 0 completely opaque.
+                Defaults to 255.
+        """
+
+        if self.is_empty:
+            return "<g />"
+
+        color = color or BLACK
+
+        if alpha is None:
+            alpha = 0.6
+
+        # return (
+        #         f"<circle cx="{self.x}" cy="{self.y}" r="{3 * factor}" "
+        #         f"stroke=\"#555555\" stroke-width=\"2\" fill=\"{color}\" opacity=\"{alpha}\">"
+        # )
 
     def tuplize(self):
         """Return a tuplized Point of the x and y coordinates in (x, y).
@@ -740,6 +824,65 @@ def cube(value):
 
     return pow(value, 3)
 
+def parse_distance(distance, dpi=96):
+    """Parse a distance string and return corresponding distance in pixels as
+    an integer.
+
+    TODO: make nested function formatting neater
+
+    distance - distance unit supported
+    dpi - resolution of display. Defaults to 96 and should usually be left as
+          is.
+
+    parameters: str, int
+    returns: int
+    """
+
+    class DistanceDecodingError(Exception):
+        """Distance decoding error.
+        """
+
+    def raise_distance_decoding_error(format, message=None):
+        """Raise a distance decoding error. This is used internally by various
+        distance geometric functions.
+
+        format - unknown format or variable
+        message - custom message
+
+        parameters: str, str
+        """
+
+        message = message or \
+                f"Unknown distance unit \"{format}\". Valid options are " \
+                "\"px\", \"pt\", "  "\"pc\", \"in\", \"mm\", and \"cm\"."
+
+        raise DistanceDecodingError(message)
+
+    if isinstance(distance, int):
+        return distance
+    elif isinstance(distance, float):
+        return int(distance)
+
+    match = compile(r'([-0-9.]+)([a-zA-Z]+)').match(distance)
+
+    if not match:
+        raise_distance_decoding_error(distance)
+
+    if not match:
+        return 0
+
+    value, unit = match.groups()
+    value = float(value)
+
+    if unit == PX: return int(value)
+    elif unit == PT: return int(value * dpi / 72)
+    elif unit == PC: return int(value * dpi / 6)
+    elif unit == IN: return int(value * dpi)
+    elif unit == MM: return int(value * dpi * 0.0393700787)
+    elif unit == CM: return int(value * dpi * 0.393700787)
+
+    else: raise_distance_decoding_error(distance)
+
 def chance(value):
     """Return True or False in a 1-in-value chance.
 
@@ -755,7 +898,8 @@ def chance(value):
         return False
 
 def are_polygons_intersecting(a, b):
-    """Check if two polygons are intersecting.
+    """Check if two polygons are intersecting. A polygon should be a tuple and
+    a series of Points. Using a Pointlist may or may not work currently.
 
     a - first polygon bounding box of intersection check
     b - second polygon bounding box of intersection check
@@ -767,6 +911,7 @@ def are_polygons_intersecting(a, b):
     for polygon in (a, b):
         for i1 in range(len(polygon)):
             i2 = (i1 + 1) % len(polygon)
+
             projection_1 = polygon[i1]
             projection_2 = polygon[i2]
 
@@ -797,13 +942,22 @@ def are_polygons_intersecting(a, b):
 
     return True
 
-def is_point_in_polygon(point, polygon):
-    """Check if the given Point exists in a polygon.
+def is_point_in_polygon(point, polygon, shapely=True):
+    """Check if the given Point exists in a polygon (meaning that it is inside
+    it). This use the shapely module if specified in the parameters. Depending
+    on the system, shapely may make this slower or faster.
+
+    If this is lagging, you may have a poor graphics card or GPU processor.
+    Speedups for shapely are automatically enabled. This is basically telling
+    shapely to use the faster Cython speedups.
 
     point - Point to check if in polygon
     polygon - polygon to check if Point coordinates exist in
+    shapely - use shapely for calculating geometry. If this is enabled and
+              shapely is not installed, the regular functions will be used.
+              Defaults to True.
 
-    parameters: int, int
+    parameters: int, int, bool
     returns: bool (True or False if Point exists in polygon)
     """
 
@@ -814,13 +968,29 @@ def is_point_in_polygon(point, polygon):
     if not length:
         return False
 
+    if shapely:
+        if "shapely" in modules():
+            from shapely import Point as Point_
+            from shapely import Polygon as Polygon_
+            from shapely.speedups import enable, enabled
+
+            if not enabled:
+                enable()
+
+            point = Point_(point.position)
+            polygon = Polygon_(polygon)
+
+            return polygon.contains(point)
+
     for i in range(length + 1):
         p2x, p2y = points[i % length]
+
         if point.y > min(p1y, p2y):
             if point.y <= max(p1y, p2y):
                 if point.x <= max(p1x, p2x):
                     if p1y != p2y:
                         xints = (point.y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+
                     # noinspection PyUnboundLocalVariable
                     if p1x == p2x or point.x <= xints:
                         inside = not inside
@@ -859,6 +1029,7 @@ def _check_collision(a, b):
 
     diff_y = a.position[1] - b.position[1]
     diff_y2 = square(diff_y)
+
     if diff_y2 > square(collision_radius):
         return False
 
@@ -886,7 +1057,7 @@ def get_nearby_sprites(object, list):
 
     count = len(list)
 
-    if count == 0:
+    if not count:
         return []
 
     # Update the position and size to check
@@ -914,7 +1085,7 @@ def get_nearby_sprites(object, list):
     emit_count = ctx.collision_query.primitives_generated
 
     # If no sprites emitted we can just return an empty list
-    if emit_count == 0:
+    if not emit_count:
         return []
 
     # .. otherwise build and return a list of the sprites selected by the transform
@@ -944,7 +1115,7 @@ def check_collision(a, b, type=None, method=0):
 
     The method parameter specifies the type of checking collisions:
         0: automatic select:
-            - Spatial if avaliable
+            - Spatial hashing if avaliable
             - GPU if 1,500+ objects
             - Simple
         1: Spatial hashing if avaliable
@@ -1012,7 +1183,7 @@ def get_distance(a, b):
     b - second object to get distance
 
     parameters: Point, Point
-    returns: int - (distance between two points
+    returns: int
     """
 
     return hypot(a.x - b.x, a.y - b.y)
@@ -1029,14 +1200,14 @@ def get_distance_(a, b):
 
     >>> a = Point(5, 5)
     >>> b = Point(5, 3)
-    >>> get_distance(a, b) == get_distance_(a, b)
+    >>> get_distance(a, b) is get_distance_(a, b)
     True
 
     a - first object to get distance
     b - second object to get distance
 
     parameters: Point, Point
-    returns: int - (distance between two points
+    returns: int
     """
 
     # Use math.pow for faster C functions
@@ -1056,7 +1227,7 @@ def get_closest(object, list, regular=True):
               regular function for getting distance (get_distance) is used. If
               it is set to False, then the other function is called
               (get_distance_). As documented, it is recommended to leave this
-              value as is.
+              value as is. Defaults to True.
 
     parameters:
         object - Point
@@ -1066,11 +1237,14 @@ def get_closest(object, list, regular=True):
     returns: tuple ((closest, distance))
     """
 
-    if regular: method = get_distance
-    else: method = get_distance_
+    if regular:
+        method = get_distance
+
+    else:
+        method = get_distance_
 
     if not list:
-        return [object, 0]
+        return (object, 0)
 
     position = 0
     distance = method(object, list[position])
@@ -1084,13 +1258,15 @@ def get_closest(object, list, regular=True):
 
     return list[position], distance
 
-def rotate_point(point, center, degrees):
+def rotate_point(point, center, degrees, precision=2):
     """Rotate a Point a certain degrees around a center. This just changes the
     Point's properties and returns the changed x and y values.
 
     point - Point to rotate around center
     center - center the Point rotates around
     degrees - angle to rotate
+    precision - precision of the calculation. This usually does not need to be
+                enhanced, but it is common to lower the value. Defaults to 2.
 
     parameters: Point, Point, int
     returns: tuple (x, y)
@@ -1103,11 +1279,13 @@ def rotate_point(point, center, degrees):
     radians_ = radians(degrees)
     cos_angle = cos(radians_)
     sin_angle = sin(radians_)
+
     x = temp_x * cos_angle - temp_y * sin_angle
     y = temp_x * sin_angle + temp_y * cos_angle
 
     # translate back
     precision = 2
+
     x = round(x + center.x, precision)
     y = round(y + center.y, precision)
 
@@ -1145,6 +1323,7 @@ def get_angle_radians(a, b):
 
     x_diff = b.x - a.x
     y_diff = b.y - a.y
+
     angle = atan2(x_diff, y_diff)
 
     return angle
@@ -1153,7 +1332,7 @@ def degrees_to_radians(degrees, digits=2):
     """Convert degrees to radians.
 
     degrees - degrees to be converted to radians
-    digits - number of digits of the π value
+    digits - number of digits of the π value. Defaults to 2, or 3.14.
 
     parameters: int
     returns: int
@@ -1163,7 +1342,8 @@ def degrees_to_radians(degrees, digits=2):
 
 def convert_xywh_to_points(point, width, height):
     """Convert an rectangle with center points and dimensions to only points.
-    These are labeled as x1, y1, x2, y2.
+    These are labeled as x1, y1, x2, y2. This can be used for widgets, because
+    most of them only have rectangular bounding boxes.
 
     point - center Point of rectangle
     width - width of rectangle
@@ -1193,7 +1373,6 @@ def lerp(a, b, u):
 
     return a + ((b - a) * u)
 
-
 def lerp_point(point1, point2, u):
     """Linearly interpolate between two points.
 
@@ -1211,17 +1390,32 @@ def lerp_point(point1, point2, u):
 
     return Point(*point)
 
+def random_vector_in_rectangle(left, width, height):
+    """Generate a point in a rectangle, or think of it as a vector pointing a
+    random direction with a random magnitude less than the radius.
 
-def random_vector_in_rectangle(bottom_left, width, height):
+    left - bottom left corner of the rectangle. You can calculate this from the
+           x and y center coordinates by doing this:
+
+           >>> x = x - width / 2
+           >>> y = y - height / 2
+
+           >>> point = Point(x, y)
+
+    width - width of the rectangle
+    height - height of the rectangle
+
+    parameters: Point, int, int
+    """
+
     return (
-        random.uniform(bottom_left[0], bottom_left[0] + width),
-        random.uniform(bottom_left[1], bottom_left[1] + height)
-    )
-
+            random.uniform(left[0], left[0] + width),
+            random.uniform(left[1], left[1] + height)
+           )
 
 def random_vector_in_circle(center, radius):
     """Generate a point in a circle, or can think of it as a vector pointing a
-    random direction with a random magnitude less than the radius
+    random direction with a random magnitude less than the radius.
 
     Reference: https://stackoverflow.com/a/30564123
 
@@ -1242,11 +1436,12 @@ def random_vector_in_circle(center, radius):
     r = radius * random()
 
     # Calculating coordinates
-    return (
-        r * cos(angle) + center[0],
-        r * sin(angle) + center[1]
-    )
+    point = Point(
+                  r * cos(angle) + center[0],
+                  r * sin(angle) + center[1]
+                 )
 
+    return point
 
 def random_vector_on_line(point1, point2):
     """Given two Points defining a line, return a random point on that line.
@@ -1259,8 +1454,8 @@ def random_vector_on_line(point1, point2):
     """
 
     u = uniform(0, 1)
-    return lerp_point(point1, point2, u)
 
+    return lerp_point(point1, point2, u)
 
 ### DECEPRATED FUNCTIONS ###
 
